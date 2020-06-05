@@ -24,6 +24,10 @@ class ttt:
     def player(self):
         return 'X' if (self.turn & 1) == 0 else 'O'
 
+    # returns true if current player is max player
+    def max_player(self):
+        return (self.turn & 1) == 0
+
     def game_over(self):
         return self.state != PLAY
 
