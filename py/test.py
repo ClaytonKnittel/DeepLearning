@@ -1,4 +1,7 @@
 
+import sys
+import os
+
 import ttt
 from monte_carlo import monte_carlo, train_nn_monte_carlo, nn_monte_carlo
 import tensorflow as tf
@@ -7,11 +10,8 @@ import numpy as np
 import random
 import re
 
-import sys
-import os
 
 path = os.path.join(os.getcwd(), "saved_modules")
-
 
 tt = ttt.ttt()
 
@@ -20,7 +20,7 @@ if len(sys.argv) == 2:
     print("go")
     while True:
         if tt.player() == 'O':
-            move = nn_monte_carlo(tt, 10)
+            move = monte_carlo(tt, 10)
         else:
             i = str(input())
             regex = re.compile('([\d]+), ?([\d]+)')
@@ -62,8 +62,7 @@ def minimax(tt, depth=0):
     return m, best
 
 
-#train_nn_monte_carlo(ttt.ttt, 100, 20)
-
+train_nn_monte_carlo(ttt.ttt, 100, 20)
 
 
 while True:
@@ -80,5 +79,4 @@ while True:
                                      "o wins" if tt.state == ttt.O_WINS else
                                      "draw"))
         break
-
 

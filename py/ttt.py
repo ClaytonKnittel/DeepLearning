@@ -103,6 +103,19 @@ class ttt:
         return [1 if p == 'X' else 0 for p in self.board] + \
                [1 if p == 'O' else 0 for p in self.board]
 
+    @staticmethod
+    def state_to_game(game_state):
+        t = ttt()
+        for i, x_loc in enumerate(game_state[:len(game_state) // 2]):
+            if x_loc == 1:
+                t.board[i] = 'X'
+                t.turn += 1
+        for i, o_loc in enumerate(game_state[len(game_state) // 2:]):
+            if o_loc == 1:
+                t.board[i] = 'O'
+                t.turn += 1
+        return t
+
     def copy(self):
         t = ttt()
         t.board = self.board[:]
