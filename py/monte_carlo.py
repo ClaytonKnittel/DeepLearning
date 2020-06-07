@@ -81,12 +81,21 @@ def tf_to_np(tf_tensor):
 
 class nn_mc:
 
-    def __init__(self):
+    def __init__(self, C=.4):
         self.model = tf.keras.Sequential([
             tf.keras.layers.Dense(9, activation="relu"),
             tf.keras.layers.Dense(1, activation=tf.nn.sigmoid)
             ])
-        self.states = []
+        # number of times any state has been visited
+        self.N = 1
+        # exploration parameter (0 = no exploration encouraged, infty means
+        # heuristic always favors least visited locations)
+        self.C = C
+        # count of # of times state has been encountered
+        self.state_counts = {}
+        # maps states to list of heuristic values for all corresponging possible
+        # proceeding states (essentially a cache for heuristics)
+        self.hs_from = {}
         self.true_scores = []
         self.pred_scores = []
 
@@ -99,8 +108,18 @@ class nn_mc:
         res = self.model(states)
         return res, [h[0] for h in tf_to_np(res)]
 
+    # called every time a game state is encountered
+    def visit(self, game_state):
+        self.N += 1
+        if game_state in self.state_counts:
+            self.state_counts[game_state] += 1
+        else:
+            self.state_counts[game_state.copy()] = 1
+
+    def reset_state_tracking(self):
+        self.state_counts = {}
+
     def record(self, game_state, true_score, pred_score):
-        self.states.append(game_state.game_state())
         self.true_scores.append(true_score)
         self.pred_scores.append(pred_score)
 
@@ -109,20 +128,31 @@ class nn_mc:
 
     def best_move(self, game_state):
         states = []
+        state_counts = []
         moves = list(game_state.legal_moves())
         assert(len(moves) > 0)
         for move in moves:
             game_state.play(move)
             states.append(game_state.game_state())
+            state_counts.append(self.state_counts.get(game_state, 1e-5))
             game_state.undo(move)
 
-        # calculate heurstic from NN
-        hts, hs = self.heuristic(states)
+        if game_state in self.hs_from:
+            hs = self.hs_from[game_state]
+        else:
+            # calculate heurstic from NN
+            _, hs = self.heuristic(states)
+            self.hs_from[game_state] = hs
 
         if not game_state.max_player():
             # minimizing player chooses smallest value, so just negate
             # everything
             hs = [1 - h for h in hs]
+
+        # calculate adjusted heuristic, encouraging exploration
+        logn = log(self.N)
+        hs = [h + self.C * sqrt(logn / state_count)
+              for state_count, h in zip(state_counts, hs)]
 
         h_tot = sum(hs)
         assert(h_tot > 0)
@@ -133,12 +163,12 @@ class nn_mc:
         # (interval (0, 1))
         for i, (move, h) in enumerate(zip(moves, hs)):
             if random.random() < (h / h_tot):
-                return move, tf.gather(hts, i)
+                return move #, tf.gather(hts, i)
             else:
                 h_tot -= h
         # shouldn't reach under normal circumstances, only happens if floating
         # point error causes h_tot to be too large, so just choose last move
-        return moves[-1], tf.gather(hts, -1)
+        return moves[-1] #, tf.gather(hts, -1)
 
     def random_walk(self, game_state):
         if game_state.game_over():
@@ -146,11 +176,12 @@ class nn_mc:
             # to +1 for X win, +0.5 for tie, 0 for O win
             return (game_state.get_state() + 1) / 2
 
-        move, ht = self.best_move(game_state)
+        #move, ht = self.best_move(game_state)
+        move = self.best_move(game_state)
 
         game_state.play(move)
+        self.visit(game_state)
         ret = self.random_walk(game_state)
-        self.record(game_state, ret, ht)
         game_state.undo(move)
         return ret
 
@@ -160,8 +191,13 @@ class nn_mc:
             grads = grad_tape.gradient(self.loss, self.model.trainable_weights)
             opt.apply_gradients(zip(grads, self.model.trainable_weights))
 
+        for state, count in self.state_counts.items():
+            if count > 1:
+                print(count)
+                print(state)
         # reset batch data
-        self.states = []
+        self.state_counts = {}
+        self.hs_from = {}
         self.true_scores = []
         self.pred_scores = []
 
@@ -171,12 +207,12 @@ class nn_mc:
 
 def _monte_carlo_mean_score(tt, m, N, p=False, stor=None):
     scores = [m.random_walk(tt) for _ in range(N)]
+    calc_score = np.mean(scores)
+    predt, pred = m.heuristic([tt.game_state(),])
     if p:
-        _, pred = m.heuristic([tt.game_state(),])
-        #print(pred[0], np.mean(scores))
-        #print(tt)
-        stor.append([pred[0], np.mean(scores), tt.copy()])
-    return np.mean(scores)
+        stor.append([pred[0], calc_score, tt.copy()])
+    m.record(tt, calc_score, predt)
+    return np.mean(calc_score)
 
 def _monte_carlo(tt, m, N, d=1):
     # list of all moves with same monte carlo score
@@ -188,6 +224,10 @@ def _monte_carlo(tt, m, N, d=1):
         tt.play(move)
         h = mult * _monte_carlo_mean_score(tt, m, N, (d == 0), stor)
         tt.undo(move)
+        # reset state counts between each batch of walks, as we want to re
+        # explore for each possible move to get a more accurate idea of the
+        # true score for a move
+        m.reset_state_tracking()
 
         if h > best_h:
             best_h = h
@@ -198,7 +238,6 @@ def _monte_carlo(tt, m, N, d=1):
         #print(move, h)
     move = random.choice(moves)
     if d == 0:
-        print('go')
         pred = [game[0] for game in stor]
         act = [game[1] for game in stor]
         boards = [str(game[2]) for game in stor]
@@ -214,10 +253,11 @@ def _monte_carlo(tt, m, N, d=1):
                     go = False
                     break
                 idx = b.find('\n')
-                s1 = b[:idx]
                 if idx == -1:
+                    s1 = b
                     boards[i] = ""
                 else:
+                    s1 = b[:idx]
                     boards[i] = b[idx + 1:]
                 s += "{:<20}".format(s1)
             s += '\n'
@@ -238,7 +278,7 @@ def abs_loss(y_true, y_pred):
 def train_nn_monte_carlo(game, n_games, N=100, save_loc="saved_models/ttt_nn"):
     m = nn_mc()
 
-    opt = tf.optimizers.SGD(0.1)
+    opt = tf.optimizers.SGD(0.05)
     loss = abs_loss
     for epoch in range(n_games):
         print("game {}".format(epoch + 1))

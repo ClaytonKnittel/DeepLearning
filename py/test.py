@@ -62,9 +62,9 @@ def minimax(tt, depth=0):
     return m, best
 
 
-train_nn_monte_carlo(ttt.ttt, 100, 20)
+train_nn_monte_carlo(ttt.ttt, 1000, 100)
 
-
+"""
 while True:
     moves = list(tt.legal_moves())
     if False and tt.player() == 'O':
@@ -79,4 +79,5 @@ while True:
                                      "o wins" if tt.state == ttt.O_WINS else
                                      "draw"))
         break
+"""
 

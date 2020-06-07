@@ -3,3 +3,4 @@ bin
 lib
 *.[od]
 .obj
+__pycache__
