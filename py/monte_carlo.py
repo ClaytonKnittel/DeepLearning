@@ -2,7 +2,7 @@
 import tensorflow as tf
 
 import numpy as np
-from math import sqrt, log
+from math import sqrt, log, exp
 import random
 
 import os
@@ -65,11 +65,7 @@ class GameList:
 class Node:
     
     def __init__(self, value):
-        if type(value) == float or type(value) == int:
-            self.value = value
-        else:
-            #self.nn_value = value
-            self.value = tf_to_np(value)[0,0]
+        self.value = value
         # either min player (-1) or max player (+1)
         self.player = 0
         self.aggregate_score = 0
@@ -88,6 +84,12 @@ class Node:
     def avg_value(self):
         return self.aggregate_score / self.num_visits \
                 if self.num_visits > 0 else 0
+
+
+def softmax(nums):
+    expod = [exp(num) for num in nums]
+    tot = sum(expod)
+    return [e / tot for e in expod]
 
 
 class MonteCarlo:
@@ -126,7 +128,10 @@ class MonteCarlo:
     def expand_child(self, game, node):
         max_player = 1 if game.max_player() else -1
 
-        for move in game.legal_moves():
+        moves = list(game.legal_moves())
+        hs = [0] * len(moves)
+
+        for idx, move in enumerate(moves):
             game.play(move)
 
             #if game.game_over():
@@ -134,12 +139,16 @@ class MonteCarlo:
             #    child = Node(ht)
             #else:
             ht = self.model(np_to_tf([game.game_state(),]))
-            child = Node(ht)
-
-            child.player = max_player
-            node.children[move] = child
+            hs[idx] = tf_to_np(ht)[0,0]
 
             game.undo(move)
+
+        #hs = softmax(hs)
+
+        for h, move in zip(hs, moves):
+            child = Node(h)
+            child.player = max_player
+            node.children[move] = child
 
         #self.add_noise(node)
 
@@ -171,6 +180,8 @@ class MonteCarlo:
             cnt.append(node.num_visits)
             boards.append(str(game))
             game.undo(move)
+
+        #pred = softmax(pred)
 
         s = ""
         for p, a in zip(pred, cnt):

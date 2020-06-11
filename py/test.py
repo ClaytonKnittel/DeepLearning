@@ -10,23 +10,35 @@ import numpy as np
 import random
 import re
 
-path = os.path.join(os.getcwd(), "saved_models")
+path = os.path.join(os.getcwd(), "saved_models/ttt")
 
 
 if len(sys.argv) == 2:
-    tt = ttt.ttt()
+    tt = ttt.ttt(w=19, h=19, to_win=5)
     m = mc.MonteCarlo(100, .4, path)
 
     print("go")
     while True:
-        if tt.player() == 'O':
+        if False and tt.player() == 'O':
             move = m.next_move(tt, True)
         else:
             i = str(input())
+            if i == "exit" or i == "quit" or i == "q":
+                break
             regex = re.compile('([\d]+), ?([\d]+)')
-            x, y = regex.findall(i)[0]
+            rf = regex.findall(i)
+            if not rf:
+                print("indecipherable")
+                continue
+            x, y = rf[0]
             x = int(x)
             y = int(y)
+            if x < 0 or y < 0 or x >= tt.w or y >= tt.h:
+                print("space ({}, {}) is out of bounds".format(x, y))
+                continue
+            if tt(x, y) != ' ':
+                print("space ({}, {}) is occupied".format(x, y))
+                continue
             move = (tt.turn, tt.player(), x, y)
         tt.play(move)
         print(tt)

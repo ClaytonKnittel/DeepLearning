@@ -6,10 +6,11 @@ DRAW = 2
 
 class ttt:
 
-    def __init__(self):
-        self.w = 3
-        self.h = 3
-        self.to_win = 3
+    def __init__(self, w=3, h=3, to_win=3):
+        assert(to_win <= max(w, h))
+        self.w = w
+        self.h = w
+        self.to_win = to_win
         self.board = [' '] * (self.w * self.h)
         self.turn = 0
         self.state = PLAY
@@ -145,7 +146,11 @@ class ttt:
         return hash(self) == hash(other)
 
     def __repr__(self):
-        btwn = '+'.join(['---'] * self.w)
-        return ' ' + ('\n' + btwn + '\n ').join([' | '.join(self.board[r * self.w : (r + 1) * self.w])
+        first_line = ' '.join(['{:>2} '.format(i) for i in range(self.w)])
+        btwn = '   ' + '+'.join(['---'] * self.w)
+        return '   ' + first_line + '\n' + \
+                ('\n' + btwn + '\n').join(
+                        ['{:>2}  '.format(r) + \
+                                ' | '.join(self.board[r * self.w : (r + 1) * self.w])
             for r in range(self.h)])
 
