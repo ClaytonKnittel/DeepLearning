@@ -2,13 +2,13 @@ include ../common.mk
 
 ODIR=.obj
 
-SRC=$(shell find . -type f -name '*.c')
-OBJ=$(patsubst %.c,$(ODIR)/%.o,$(SRC))
-EXE=$(patsubst %.c,$(BIN_DIR)/%,$(SRC))
+SRC=$(shell find . -type f -name '*.cpp')
+OBJ=$(patsubst %.cpp,$(ODIR)/%.o,$(SRC))
+EXE=$(patsubst %.cpp,$(BIN_DIR)/%,$(SRC))
 
 $(shell mkdir -p $(ODIR))
 
-DEPFILES=$(SRC:%.c=$(ODIR)/%.d)
+DEPFILES=$(SRC:%.cpp=$(ODIR)/%.d)
 
 
 # to prevent files from being auto-deleted by make after build completes
@@ -20,7 +20,7 @@ all: $(EXE)
 $(BIN_DIR)/%: $(ODIR)/%.o $(LIBUTIL)
 	$(CC) $(CFLAGS) $< -o $@ $(IFLAGS) $(LDFLAGS) -lutil
 
-$(ODIR)/%.o: %.c
+$(ODIR)/%.o: %.cpp
 	$(CC) $(CFLAGS) $< -c -o $@ $(IFLAGS)
 
 

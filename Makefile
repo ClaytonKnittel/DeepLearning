@@ -6,8 +6,8 @@ ODIR=.obj
 SLIB=$(LIB_DIR)/libutil.a
 
 
-SRC=$(shell find $(SDIR) -type f -name '*.c')
-OBJ=$(patsubst $(SDIR)/%.c,$(ODIR)/%.o,$(SRC))
+SRC=$(shell find $(SDIR) -type f -name '*.cpp')
+OBJ=$(patsubst $(SDIR)/%.cpp,$(ODIR)/%.o,$(SRC))
 DEP=$(wildcard $(SDIR)/*.h)
 
 DIRS=$(shell find $(SDIR) -type d)
@@ -18,11 +18,15 @@ $(shell mkdir -p $(ODIR))
 $(shell mkdir -p $(OBJDIRS))
 $(shell mkdir -p $(BIN_DIR))
 
-DEPFILES=$(SRC:$(SDIR)/%.c=$(ODIR)/%.d)
+DEPFILES=$(SRC:$(SDIR)/%.cpp=$(ODIR)/%.d)
 
 
 .PHONY: all
-all: $(SLIB) tests
+all: cppflow $(SLIB) tests
+
+.PHONY: cppflow
+cppflow:
+	(make -C $(CPPFLOW_DIR) BASE_DIR=$(BASE_DIR) LIB_DIR=$(LIB_DIR))
 
 .PHONY: tests
 tests:
@@ -33,7 +37,7 @@ $(SLIB): $(OBJ)
 	$(AR) -rcs $@ $^
 
 
-$(ODIR)/%.o: $(SDIR)/%.c
+$(ODIR)/%.o: $(SDIR)/%.cpp
 	$(CC) $(CFLAGS) $< -c -o $@ $(IFLAGS)
 
 
@@ -45,5 +49,6 @@ clean:
 	rm -rf $(LIB_DIR)
 	rm -rf $(BIN_DIR)
 	(make -C $(TEST_DIR) clean)
+	(make -C $(CPPFLOW_DIR) clean)
 
 

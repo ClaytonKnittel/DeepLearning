@@ -4,3 +4,5 @@ lib
 *.[od]
 .obj
 __pycache__
+tensorflow
+cppflow

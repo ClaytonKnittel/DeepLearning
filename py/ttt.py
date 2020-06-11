@@ -13,6 +13,8 @@ class ttt:
         self.board = [' '] * (self.w * self.h)
         self.turn = 0
         self.state = PLAY
+        # history of moves
+        self.history = []
 
     def __call__(self, x, y):
         assert(x >= 0)
@@ -36,6 +38,8 @@ class ttt:
         return self.state - 2
 
     def legal_moves(self):
+        if self.game_over():
+            return
         p = self.player()
         for y in range(self.h):
             for x in range(self.w):
@@ -84,6 +88,7 @@ class ttt:
         assert(p == self.player())
         self.board[y * self.w + x] = p
         self.turn += 1
+        self.history.append(move)
         if self.__check_win(move):
             self.state = X_WINS if p == 'X' else O_WINS
         elif self.turn == self.w * self.h:
@@ -97,15 +102,20 @@ class ttt:
         assert(old == p)
         self.board[y * self.w + x] = ' '
         self.turn -= 1
+        self.history.pop()
         self.state = PLAY
 
     def game_state(self):
-        return [1 if p == 'X' else 0 for p in self.board] + \
+        maxp = 1 if self.max_player() else 0
+        minp = 1 - maxp
+        return [maxp, minp] + \
+               [1 if p == 'X' else 0 for p in self.board] + \
                [1 if p == 'O' else 0 for p in self.board]
 
     @staticmethod
     def state_to_game(game_state):
         t = ttt()
+        game_state = game_state[2:]
         for i, x_loc in enumerate(game_state[:len(game_state) // 2]):
             if x_loc == 1:
                 t.board[i] = 'X'
@@ -121,6 +131,7 @@ class ttt:
         t.board = self.board[:]
         t.turn = self.turn
         t.state = self.state
+        t.history = self.history[:]
         return t
 
     def __hash__(self):
