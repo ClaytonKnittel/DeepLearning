@@ -74,22 +74,28 @@ def minimax(tt, depth=0):
     return m, best
 
 
-m = mc.MonteCarlo(19, 19, 100, .4)
+w = 19
+h = 19
+tw = 5
+
+m = mc.MonteCarlo(w, h, tw, 300, .4)
 
 #train_nn_monte_carlo(ttt.ttt, 1000, 100)
 
 
 def run_play_game(m):
-    tt = ttt.ttt(w=19, h=19, to_win=5)
+    tt = ttt.ttt(w=w, h=h, to_win=tw)
     print("yo")
     while True:
         moves = list(tt.legal_moves())
         if False and tt.player() == 'O':
             _, move = minimax(tt)
         else:
-            move = m.next_move(tt, True)
+            move, p = m.next_move_policy(tt, True)
         tt.play(move)
+        print("\033[0;36m\033[1m", end='')
         print(tt)
+        print("\033[0m", end='')
         print()
         if tt.game_over():
             print("game over, {}".format("x wins" if tt.state == ttt.X_WINS else
@@ -98,20 +104,21 @@ def run_play_game(m):
             exit(0)
 
 
-run_play_game(m)
+#run_play_game(m)
 
 
-gl = mc.GameList(50)
+gl = mc.GameList(10)
 """
 gl.save_game(tt)
 print(gl.random_batch(2))
 """
 
-for iter in range(800):
+for iter in range(1):
     print("epoch {}:".format(iter + 1))
-    mc.play_games(m, ttt.ttt, gl, 25)
+    mc.play_games(m, ttt.ttt, gl, 5)
     mc.learn_from_games(m, gl, 2, 100)
-    run_play_game(m)
     print("saving model")
     tf.keras.models.save_model(m.model, path)
+    if iter % 20 == 19:
+        run_play_game(m)
 

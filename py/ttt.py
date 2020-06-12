@@ -36,6 +36,7 @@ class ttt:
 
     # return 1 if X wins, 0 if draw, -1 if O wins
     def get_state(self):
+        assert(self.game_over())
         return self.state - 2
 
     def legal_moves(self):
@@ -109,15 +110,26 @@ class ttt:
     # return game state as 2D board with two channels one for X pieces and 1
     # for O
     def game_state(self):
-        return [[[1, 0] if self(x, y) == 'X' else
-                [0, 1] if self(x, y) == 'O' else
-                [0, 0] for x in range(self.w)]
+        dim4 = 1 if self.player() == 'X' else 0
+        this_player = self.player()
+        other_player = 'X' if this_player == 'O' else 'O'
+        return [[[1, 0, 0, dim4] if self(x, y) == this_player else
+                [0, 1, 0, dim4] if self(x, y) == other_player else
+                [0, 0, 1, dim4] for x in range(self.w)]
                  for y in range(self.h)]
+
+    # returns move given the move index (0 - # possible moves)
+    def get_move(self, idx):
+        return (self.turn, self.player(), idx % self.w, idx // self.w)
+
+    def get_action_idx(self, action):
+        return action[3] * self.w + action[2]
 
     @staticmethod
     def state_to_game(game_state):
+        # need to fix
+        abort()
         t = ttt()
-        game_state = game_state[2:]
         for i, x_loc in enumerate(game_state[:len(game_state) // 2]):
             if x_loc == 1:
                 t.board[i] = 'X'

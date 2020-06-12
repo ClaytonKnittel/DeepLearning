@@ -19,14 +19,14 @@ def tf_to_np(tf_tensor):
 
 class IndexedGame:
 
-    def __init__(self, game):
+    def __init__(self, game, policies):
+        assert(len(policies) == len(game.history))
         game = game.copy()
-        self.game_images = [None] * (len(game.history) + 1)
-        for idx, move in zip(range(len(game.history), 0, -1),
+        self.game_images = [None] * len(game.history)
+        for idx, move in zip(range(len(game.history)-1, -1, -1),
                              reversed(game.history)):
-            self.game_images[idx] = game.copy()
             game.undo(move)
-        self.game_images[0] = game
+            self.game_images[idx] = (game.copy(), policies[idx])
 
     def __getitem__(self, idx):
         return self.game_images[idx]
@@ -42,21 +42,27 @@ class GameList:
         self.buffer_size = buffer_size
         self.total_moves = 0
 
-    def save_game(self, game):
-        self.buffer.append((game, IndexedGame(game)))
+    def save_game(self, game, policies):
+        self.buffer.append((game, IndexedGame(game, policies)))
         self.total_moves += len(game.history)
         if len(self.buffer) > self.buffer_size:
             first_game, _ = self.buffer.pop(0)
             self.total_moves -= len(first_game.history)
+
+    @staticmethod
+    def random_pick(idxGame):
+        r = np.random.choice(len(idxGame.game_images))
+        return idxGame[r]
 
     def random_batch(self, n_moves):
         game_list_choices = np.random.choice(len(self.buffer),
                 size=n_moves,
                 p=[len(game.history) / self.total_moves for game, _ in self.buffer])
         game_list = np.array(self.buffer)[game_list_choices]
-        images = [np.random.choice(idxGame.game_images) for _, idxGame in game_list]
-        return [(image, (end_state.get_state() + 1) / 2)
-                for image, (end_state, _) in zip(images, game_list)]
+        images = [(game.get_state(), GameList.random_pick(idxGame))
+                  for game, idxGame in game_list]
+        return [(image, end_state, policy)
+                for end_state, (image, policy) in images]
 
     def __repr__(self):
         return ' '.join([str(itm) for itm in self.buffer])
@@ -77,9 +83,8 @@ class Node:
         return len(self.children) > 0
 
     def get_value(self):
-        # returns value of node, adjusted to be negated if this is a minimizing
-        # player
-        return self.value if self.player == 1 else -self.value
+        # returns value of node as given by policy in NN
+        return self.value
 
     def avg_value(self):
         return self.aggregate_score / self.num_visits \
@@ -94,17 +99,20 @@ def softmax(nums):
 
 class MonteCarlo:
 
-    def __init__(self, w, h, num_playouts=100, C=.4, model_save=None):
+    def __init__(self, w, h, to_win, num_playouts=100, C=.4, model_save=None):
+        self.game_w = w
+        self.game_h = h
+        self.game_tw = to_win
         if model_save:
             print("loading model")
             #self.model = tf.saved_model.load(model_save)
             self.model = tf.keras.models.load_model(model_save)
         else:
-            inpt = tf.keras.Input(shape=(w, h, 2))
+            inpt = tf.keras.Input(shape=(w, h, 4))
 
             # first convolution
             # 5x5 convolution filter with zero-padded board
-            conv = tf.keras.layers.Conv2D(64, 5, data_format="channels_last",
+            conv = tf.keras.layers.Conv2D(32, 5, data_format="channels_last",
                     padding="same")
             bn   = tf.keras.layers.BatchNormalization()
             relu = tf.keras.layers.ReLU()
@@ -112,16 +120,16 @@ class MonteCarlo:
             x = relu(bn(conv(inpt)))
 
             # residual layers
-            for _ in range(5):
+            for _ in range(1):
                 res = x
 
-                conv = tf.keras.layers.Conv2D(64, 3, data_format="channels_last",
+                conv = tf.keras.layers.Conv2D(32, 3, data_format="channels_last",
                         padding="same")
                 bn = tf.keras.layers.BatchNormalization()
                 relu = tf.keras.layers.ReLU()
                 x = relu(bn(conv(x)))
 
-                conv = tf.keras.layers.Conv2D(64, 3, data_format="channels_last",
+                conv = tf.keras.layers.Conv2D(32, 3, data_format="channels_last",
                         padding="same")
                 bn = tf.keras.layers.BatchNormalization()
                 x = bn(conv(x))
@@ -141,7 +149,7 @@ class MonteCarlo:
             v = relu(bn(conv(x)))
 
             flat = tf.keras.layers.Flatten()
-            dens = tf.keras.layers.Dense(256)
+            dens = tf.keras.layers.Dense(128)
             relu = tf.keras.layers.ReLU()
 
             v = relu(dens(flat(v)))
@@ -149,8 +157,20 @@ class MonteCarlo:
             dens = tf.keras.layers.Dense(1, activation=tf.nn.tanh)
             v = dens(v)
 
-            # TODO when add policy head make more efficient
-            self.model = tf.keras.Model(inputs=inpt, outputs=v, name="value network")
+
+            # policy head
+            conv = tf.keras.layers.Conv2D(2, 1, data_format="channels_last")
+            bn   = tf.keras.layers.BatchNormalization()
+            relu = tf.keras.layers.ReLU()
+
+            p = relu(bn(conv(x)))
+
+            flat = tf.keras.layers.Flatten()
+            dens = tf.keras.layers.Dense(w * h)
+
+            p = dens(flat(p))
+
+            self.model = tf.keras.Model(inputs=inpt, outputs=[v, p], name="value network")
 
         self.optimizer = tf.keras.optimizers.SGD(.05)
         self.num_playouts = num_playouts
@@ -165,7 +185,7 @@ class MonteCarlo:
 
     def add_noise(self, node):
         moves = node.children.keys()
-        noise = np.random.gamma(.3, 1., len(moves))
+        noise = np.random.gamma(.2, 1., len(moves))
         # exploration percentage
         frac = .25
         for n, move in zip(noise, moves):
@@ -176,34 +196,32 @@ class MonteCarlo:
     def expand_child(self, game, node):
         max_player = 1 if game.max_player() else -1
 
-        moves = list(game.legal_moves())
-        hs = [0] * len(moves)
+        if game.game_over():
+            return game.get_state()
 
-        for idx, move in enumerate(moves):
-            game.play(move)
+        ht, policyt = self.model(np_to_tf([game.game_state(),]))
+        h = tf_to_np(ht)[0,0]
+        policy = tf_to_np(policyt)[0]
 
-            #if game.game_over():
-            #    ht = (game.get_state() + 1) / 2
-            #    child = Node(ht)
-            #else:
-            ht = self.model(np_to_tf([game.game_state(),]))
-            hs[idx] = tf_to_np(ht)[0,0]
+        p = {a : exp(policy[game.get_action_idx(a)])
+                for a in game.legal_moves()}
 
-            game.undo(move)
+        assert(len(list(game.legal_moves())) > 0)
 
-        hs = softmax(hs)
+        tot = sum(p.values())
 
-        for h, move in zip(hs, moves):
-            child = Node(h)
+        for move, val in p.items():
+            child = Node(val / tot)
             child.player = max_player
             node.children[move] = child
 
         self.add_noise(node)
 
-    def backpropagate(self, history, value, player):
+        return h
+
+    def backpropagate(self, history, value):
         for node in history:
-            #node.aggregate_score += value if node.player == player else (1 - value)
-            node.aggregate_score += value if node.player == player else -value
+            node.aggregate_score += node.player * value
             node.num_visits += 1
 
     def random_walk(self, game, root):
@@ -215,8 +233,8 @@ class MonteCarlo:
             history.append(root)
             test_game.play(move)
 
-        self.expand_child(test_game, root)
-        self.backpropagate(history, root.get_value(), root.player)
+        value = self.expand_child(test_game, root)
+        self.backpropagate(history, value)
 
     def print_confidence(self, game, root):
         pred   = []
@@ -230,30 +248,82 @@ class MonteCarlo:
             boards.append(str(game))
             game.undo(move)
 
+        # 3xact width
+        wid = 4 * (game.w + 1)
+        wid += 3
+
+        assert(180 >= wid)
+        num_per_row = (180 // wid)
+
         s = ""
-        for p, a in zip(pred, cnt):
-            s += "{:<20}".format("{:.6f} {}".format(p, a))
-        s += '\n'
-        go = True
-        while go:
-            for i in range(len(boards)):
-                b = boards[i]
-                if b == "":
-                    go = False
+        while True:
+            cnt2 = 0
+            for p, a in zip(pred, cnt):
+                s += ("{:<" + str(wid) + "}").format("{:.6f} {}".format(p, a))
+                cnt2 += 1
+                if cnt2 == num_per_row:
                     break
-                idx = b.find('\n')
-                if idx == -1:
-                    s1 = b
-                    boards[i] = ""
-                else:
-                    s1 = b[:idx]
-                    boards[i] = b[idx + 1:]
-                s += "{:<20}".format(s1)
             s += '\n'
+            if cnt2 == num_per_row:
+                pred = pred[num_per_row:]
+                cnt = cnt[num_per_row:]
+
+            go = True
+            while go:
+                for i in range(min(len(boards), num_per_row)):
+                    b = boards[i]
+                    if b == "":
+                        go = False
+                        break
+                    idx = b.find('\n')
+                    if idx == -1:
+                        s1 = b
+                        boards[i] = ""
+                    else:
+                        s1 = b[:idx]
+                        boards[i] = b[idx + 1:]
+                    s += ("{:<" + str(wid) + "}").format(s1)
+                s += '\n'
+            if len(boards) > num_per_row:
+                boards = boards[num_per_row:]
+                continue
+            break
         print(s)
 
 
+    def next_move_policy(self, game, p=False):
+        assert(self.game_w == game.w)
+        assert(self.game_h == game.h)
+        assert(self.game_tw == game.to_win)
+
+        root = Node(0)
+        for _ in range(self.num_playouts):
+            self.random_walk(game, root)
+
+        if p:
+            self.print_confidence(game, root)
+
+        maxnv = 0
+        next_move = None
+        policy = [0] * (self.game_w * self.game_h)
+        policy_tot = 0
+        for action, node in root.children.items():
+            policy[game.get_action_idx(action)] = node.num_visits
+            policy_tot += node.num_visits
+            if node.num_visits > maxnv:
+                maxnv = node.num_visits
+                next_move = action
+
+        policy = [p / policy_tot for p in policy]
+
+        return next_move, policy
+
+
     def next_move(self, game, p=False):
+        assert(self.game_w == game.w)
+        assert(self.game_h == game.h)
+        assert(self.game_tw == game.to_win)
+
         root = Node(0)
         for _ in range(self.num_playouts):
             self.random_walk(game, root)
@@ -268,14 +338,41 @@ class MonteCarlo:
 
 
 
+from threading import Thread
+
+
+def _play_games(mc, game_class, idx, retvals):
+    game = game_class(w=mc.game_w, h=mc.game_h, to_win=mc.game_tw)
+    policy_values = []
+    while not game.game_over():
+        move, policy = mc.next_move_policy(game)
+        game.play(move)
+        policy_values.append(policy)
+    retvals[idx] = (game, policy_values)
+
+def play_games_mt(mc, game_class, game_list, num_games):
+    ts = [None] * num_games
+    retvals = [None] * num_games
+    for idx in range(num_games):
+        ts[idx] = Thread(name="thread {}".format(idx), target=_play_games,
+                args=(mc, game_class, idx, retvals))
+        ts[idx].start()
+
+    for idx in range(num_games):
+        ts[idx].join()
+        game, policy_values = retvals[idx]
+        game_list.save_game(game, policy_values)
+
+
 def play_games(mc, game_class, game_list, num_games):
     for _ in range(num_games):
-        game = game_class(w=19, h=19, to_win=5)
+        game = game_class(w=mc.game_w, h=mc.game_h, to_win=mc.game_tw)
+        policy_values = []
         while not game.game_over():
-            move = mc.next_move(game)
+            move, policy = mc.next_move_policy(game)
             game.play(move)
-        game_list.save_game(game)
-
+            policy_values.append(policy)
+        game_list.save(game, policy_values)
 
 
 def learn_from_games(mc, game_list, n_batches, batch_size):
@@ -283,13 +380,15 @@ def learn_from_games(mc, game_list, n_batches, batch_size):
         batch = game_list.random_batch(batch_size)
 
         # construct input
-        game_states = [game.game_state() for game, _ in batch]
+        game_states = [game.game_state() for game, _v, _p in batch]
         # construct output
-        expected_output = [[true_val,] for _, true_val in batch]
+        expected_values = [[float(true_val),] for _g, true_val, _p in batch]
+        expected_policies = [policy for _g, _v, policy in batch]
 
         with tf.GradientTape() as tape:
-            nn_val = mc.model(np_to_tf(game_states))
-            loss = tf.losses.mean_squared_error(nn_val, expected_output)
+            nn_val, nn_policy = mc.model(np_to_tf(game_states))
+            loss = tf.losses.mean_squared_error(nn_val, expected_values) + \
+                    tf.nn.softmax_cross_entropy_with_logits(expected_policies, nn_policy)
 
         #loss += tf.nn.l2_loss()
         grads = tape.gradient(loss, mc.model.trainable_weights)
