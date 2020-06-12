@@ -106,12 +106,13 @@ class ttt:
         self.history.pop()
         self.state = PLAY
 
+    # return game state as 2D board with two channels one for X pieces and 1
+    # for O
     def game_state(self):
-        maxp = 1 if self.max_player() else 0
-        minp = 1 - maxp
-        return [maxp, minp] + \
-               [1 if p == 'X' else 0 for p in self.board] + \
-               [1 if p == 'O' else 0 for p in self.board]
+        return [[[1, 0] if self(x, y) == 'X' else
+                [0, 1] if self(x, y) == 'O' else
+                [0, 0] for x in range(self.w)]
+                 for y in range(self.h)]
 
     @staticmethod
     def state_to_game(game_state):
@@ -128,7 +129,7 @@ class ttt:
         return t
 
     def copy(self):
-        t = ttt()
+        t = ttt(self.w, self.h, self.to_win)
         t.board = self.board[:]
         t.turn = self.turn
         t.state = self.state

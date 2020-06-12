@@ -10,7 +10,7 @@ import numpy as np
 import random
 import re
 
-path = os.path.join(os.getcwd(), "saved_models/ttt")
+path = os.path.join(os.getcwd(), "saved_models/gomoku")
 
 
 if len(sys.argv) == 2:
@@ -74,13 +74,14 @@ def minimax(tt, depth=0):
     return m, best
 
 
-m = mc.MonteCarlo(100, .4, path)
+m = mc.MonteCarlo(19, 19, 100, .4)
 
 #train_nn_monte_carlo(ttt.ttt, 1000, 100)
 
 
 def run_play_game(m):
-    tt = ttt.ttt()
+    tt = ttt.ttt(w=19, h=19, to_win=5)
+    print("yo")
     while True:
         moves = list(tt.legal_moves())
         if False and tt.player() == 'O':
@@ -94,7 +95,10 @@ def run_play_game(m):
             print("game over, {}".format("x wins" if tt.state == ttt.X_WINS else
                                          "o wins" if tt.state == ttt.O_WINS else
                                          "draw"))
-            break
+            exit(0)
+
+
+run_play_game(m)
 
 
 gl = mc.GameList(50)

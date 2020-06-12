@@ -79,7 +79,7 @@ class Node:
     def get_value(self):
         # returns value of node, adjusted to be negated if this is a minimizing
         # player
-        return self.value if self.player == 1 else 1 - self.value
+        return self.value if self.player == 1 else -self.value
 
     def avg_value(self):
         return self.aggregate_score / self.num_visits \
@@ -94,17 +94,64 @@ def softmax(nums):
 
 class MonteCarlo:
 
-    def __init__(self, num_playouts=100, C=.4, model_save=None):
+    def __init__(self, w, h, num_playouts=100, C=.4, model_save=None):
         if model_save:
             print("loading model")
             #self.model = tf.saved_model.load(model_save)
             self.model = tf.keras.models.load_model(model_save)
         else:
-            self.model = tf.keras.Sequential([
-                tf.keras.layers.Dense(36, activation="relu"),
-                tf.keras.layers.Dense(36, activation="relu"),
-                tf.keras.layers.Dense(1, activation=tf.nn.sigmoid)
-                ])
+            inpt = tf.keras.Input(shape=(w, h, 2))
+
+            # first convolution
+            # 5x5 convolution filter with zero-padded board
+            conv = tf.keras.layers.Conv2D(64, 5, data_format="channels_last",
+                    padding="same")
+            bn   = tf.keras.layers.BatchNormalization()
+            relu = tf.keras.layers.ReLU()
+
+            x = relu(bn(conv(inpt)))
+
+            # residual layers
+            for _ in range(5):
+                res = x
+
+                conv = tf.keras.layers.Conv2D(64, 3, data_format="channels_last",
+                        padding="same")
+                bn = tf.keras.layers.BatchNormalization()
+                relu = tf.keras.layers.ReLU()
+                x = relu(bn(conv(x)))
+
+                conv = tf.keras.layers.Conv2D(64, 3, data_format="channels_last",
+                        padding="same")
+                bn = tf.keras.layers.BatchNormalization()
+                x = bn(conv(x))
+
+                x = tf.keras.layers.Add()([x, res])
+                relu = tf.keras.layers.ReLU()
+                x = relu(x)
+
+            # main neural network body
+            self.body = tf.keras.Model(inputs=inpt, outputs=x)
+
+            # value head
+            conv = tf.keras.layers.Conv2D(1, 1, data_format="channels_last")
+            bn   = tf.keras.layers.BatchNormalization()
+            relu = tf.keras.layers.ReLU()
+
+            v = relu(bn(conv(x)))
+
+            flat = tf.keras.layers.Flatten()
+            dens = tf.keras.layers.Dense(256)
+            relu = tf.keras.layers.ReLU()
+
+            v = relu(dens(flat(v)))
+
+            dens = tf.keras.layers.Dense(1, activation=tf.nn.tanh)
+            v = dens(v)
+
+            # TODO when add policy head make more efficient
+            self.model = tf.keras.Model(inputs=inpt, outputs=v, name="value network")
+
         self.optimizer = tf.keras.optimizers.SGD(.05)
         self.num_playouts = num_playouts
         self.C = C
@@ -122,8 +169,9 @@ class MonteCarlo:
         # exploration percentage
         frac = .25
         for n, move in zip(noise, moves):
-            node.children[move].value = \
-                    node.children[move].value * (1 - frac) + n * frac
+            v = node.children[move].value * (1 - frac) + n * frac
+            assert(v >= 0)
+            node.children[move].value = v
 
     def expand_child(self, game, node):
         max_player = 1 if game.max_player() else -1
@@ -143,18 +191,19 @@ class MonteCarlo:
 
             game.undo(move)
 
-        #hs = softmax(hs)
+        hs = softmax(hs)
 
         for h, move in zip(hs, moves):
             child = Node(h)
             child.player = max_player
             node.children[move] = child
 
-        #self.add_noise(node)
+        self.add_noise(node)
 
     def backpropagate(self, history, value, player):
         for node in history:
-            node.aggregate_score += value if node.player == player else (1 - value)
+            #node.aggregate_score += value if node.player == player else (1 - value)
+            node.aggregate_score += value if node.player == player else -value
             node.num_visits += 1
 
     def random_walk(self, game, root):
@@ -180,8 +229,6 @@ class MonteCarlo:
             cnt.append(node.num_visits)
             boards.append(str(game))
             game.undo(move)
-
-        #pred = softmax(pred)
 
         s = ""
         for p, a in zip(pred, cnt):
@@ -223,7 +270,7 @@ class MonteCarlo:
 
 def play_games(mc, game_class, game_list, num_games):
     for _ in range(num_games):
-        game = game_class()
+        game = game_class(w=19, h=19, to_win=5)
         while not game.game_over():
             move = mc.next_move(game)
             game.play(move)
