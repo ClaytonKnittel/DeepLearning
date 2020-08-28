@@ -3,6 +3,7 @@
 
 //#include <tensorflow/c/c_api.h>
 
+/*
 #include <Model.h>
 #include <Tensor.h>
 
@@ -16,12 +17,12 @@ int go() {
     // so we don't get warnings about AVX instructions
     putenv((char*) "TF_CPP_MIN_LOG_LEVEL=2");
 
-    /*TF_Graph * graph;
-    printf("%s\n", TF_Version());
+    //TF_Graph * graph;
+    //printf("%s\n", TF_Version());
 
-    graph = TF_NewGraph();
+    //graph = TF_NewGraph();
 
-    TF_DeleteGraph(graph);*/
+    //TF_DeleteGraph(graph);
 
     //Model model("saved_models/ttt_nn/saved_model.pb");
     Model model("cppflow/examples/load_model/model.pb");
@@ -43,5 +44,5 @@ spam_system(PyObject *self, PyObject *args)
         return NULL;
     sts = system(command);
     return PyLong_FromLong(sts);
-}
+}*/
 
