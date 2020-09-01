@@ -6,7 +6,7 @@ EMPTY = 0
 BLACK = 1
 WHITE = 2
 
-MAX_N_MOVES = 10
+MAX_N_MOVES = 15
 
 class MoveError(Exception):
     pass

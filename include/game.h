@@ -1,3 +1,4 @@
+#pragma once
 
 #include <functional>
 
@@ -5,13 +6,16 @@
  * to be overridden by the individual game move objects
  */
 class GameMove {
+public:
+
+    virtual ~GameMove() = default;
 };
 
 
 class Game {
 public:
 
-    virtual ~Game();
+    virtual ~Game() = default;
 
     /*
      * returns true if the game is over, false otherwise
@@ -45,5 +49,17 @@ public:
      */
     virtual void for_each_legal_move(std::function<void(Game &, GameMove &)> f) = 0;
 
+
+    /*
+     * prints the game state to the given output stream
+     */
+    virtual void print(std::ostream &) const = 0;
+
 };
+
+
+static std::ostream & operator<<(std::ostream & o, const Game & game) {
+    game.print(o);
+    return o;
+}
 

@@ -1,12 +1,17 @@
 
-#include <go.h>
+#include <algorithm>
+#include <iostream>
 
-#include "../utils/include/util/util.h"
+#include <go.h>
 
 int main(int argc, char * argv[]) {
 
-    int res = max(2, 3);
+    for (int w = 3; w <= 25; w += 2) {
+        Go g(w, w);
 
-    return res;
+        std::cout << g << std::endl;
+    }
+
+    return 0;
 }
 
