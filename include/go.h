@@ -105,6 +105,14 @@ private:
      */
     int num_liberties(board_idx_t idx) const;
 
+    /*
+     * count the number of liberties around the tile at idx, without
+     * consideration of the group the stone at idx may be tied to (i.e. this
+     * returns a number 0-4, counting only the number of empty tiles
+     * immediately around this tile)
+     */
+    int count_liberties(board_idx_t idx) const;
+
 
     /*
      * calculates max_n_strings, to be called on initialization
@@ -125,6 +133,23 @@ private:
      * frees a string struct back to the freelist
      */
     void free_string(uint32_t string_ident);
+
+
+    /*
+     * appends the tile at idx to the given string
+     */
+    void append_string(board_idx_t idx, uint32_t string_idx);
+
+    /*
+     * joins the two given strings into s1
+     */
+    void join_strings(uint32_t s1, uint32_t s2);
+
+    /*
+     * merge all strings adjacent to this tile which are the color "color"
+     * into the string "string_idx", and set the tile at idx to "color"
+     */
+    void merge_strings(board_idx_t idx, Color color, uint32_t string_idx);
 
 
     /*
@@ -159,6 +184,12 @@ private:
      * checks whether the move is suicidal
      */
     bool move_is_suicide(board_idx_t idx, Color color) const;
+
+    /*
+     * places a tile at idx, assuming all 4 of idx's neighbors are not the same
+     * color as the stone we are placing
+     */
+    void place_lone_tile(board_idx_t idx, Color color);
 
     /*
      * unsafe version of play, does not check the legality of the move,

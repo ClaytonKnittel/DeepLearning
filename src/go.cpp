@@ -12,12 +12,16 @@
 struct Tile {
     uint32_t data;
 
+    // when this tile has a stone on it, next_tile is a pointer to the next
+    // tile in a list of all stones in a string
+    board_idx_t next_tile;
+
     Color color() const {
         return static_cast<Color>(data & Go::tile_mask);
     }
 
-    void set_color(Color t) {
-        data = (data & ~Go::tile_mask) | ((uint32_t) data);
+    void set_color(Color c) {
+        data = (data & ~Go::tile_mask) | ((uint32_t) c);
     }
 
     uint32_t string_idx() const {
@@ -27,6 +31,14 @@ struct Tile {
     void set_string_idx(uint32_t idx) {
         data = (data & Go::tile_mask) | (idx << Go::tile_width);
     }
+
+    uint32_t get_both() const {
+        return data;
+    }
+
+    void set_both(Color c, uint32_t idx) {
+        data = ((uint32_t) c) | (idx << Go::tile_width);
+    }
 };
 
 
@@ -34,6 +46,13 @@ struct Tile {
 struct TileString {
     // when color is set to this, this TileString is "free"
     static constexpr const int unused = Color::num_states;
+    // only record the exact locations of up to 8 liberties
+    static constexpr const int tracked_liberties = 8;
+
+    // list of liberties for this string, to be kept sorted by value.
+    // if liberties > tracked_liberties, then the contents of this list
+    // are undefined
+    board_idx_t liberty_list[tracked_liberties];
 
     // which team the string belongs to, either black or white
     int color;
@@ -45,12 +64,15 @@ struct TileString {
             // number of stones in the string
             int size;
 
-            // the number of empty or occupied tiles adjacent to at least one stone in
-            // this string
+            // the number of empty or occupied tiles adjacent to at least one
+            // stone in this string
             int neighbors;
 
             // the number of empty tiles adjacent to this string
             int liberties;
+
+            // index of the first stone in this string
+            board_idx_t first_tile;
 
         };
         // when this TileString is "free"
@@ -113,6 +135,23 @@ int Go::num_liberties(board_idx_t idx) const {
 }
 
 
+int Go::count_liberties(board_idx_t idx) const {
+    uint32_t n;
+    int tot = 0;
+
+    n = idx_up(idx);
+    tot += tiles[n].color() == Color::empty;
+    n = idx_left(idx);
+    tot += tiles[n].color() == Color::empty;
+    n = idx_right(idx);
+    tot += tiles[n].color() == Color::empty;
+    n = idx_down(idx);
+    tot += tiles[n].color() == Color::empty;
+
+    return tot;
+}
+
+
 
 /*
  * the board can be packed like so
@@ -153,6 +192,7 @@ uint32_t Go::alloc_string() {
     assert(ret != -1);
     assert(this->strings[this->free_strings].color == TileString::unused);
     this->free_strings = this->strings[this->free_strings].next_free;
+
     return ret;
 }
 
@@ -162,6 +202,32 @@ void Go::free_string(uint32_t string_ident) {
     s.color = TileString::unused;
     s.next_free = this->free_strings;
     this->free_strings = string_ident;
+}
+
+
+void Go::join_strings(uint32_t s1, uint32_t s2) {
+
+}
+
+
+void Go::merge_strings(board_idx_t idx, Color color, uint32_t string_idx) {
+    board_idx_t n;
+    uint32_t o_str_idx;
+
+    n = idx_up(idx);
+    if (tiles[n].color() == color &&
+            (o_str_idx = tiles[n].string_idx()) != string_idx) {
+        join_strings(string_idx, o_str_idx);
+    }
+
+    n = idx_left(idx);
+    if (tiles[n].color() == color &&
+            (o_str_idx = tiles[n].string_idx()) != string_idx) {
+        join_strings(string_idx, o_str_idx);
+    }
+
+    Tile & t = tiles[idx];
+    t.set_both(color, string_idx);
 }
 
 
@@ -275,12 +341,81 @@ bool Go::move_is_suicide(board_idx_t idx, Color color) const {
     return true;
 }
 
-void Go::_do_play(board_idx_t idx, Color color) {
 
+void Go::place_lone_tile(board_idx_t idx, Color color) {
+    // need to allocate a new string for this tile
+    uint32_t new_str = alloc_string();
+    TileString & s = strings[new_str];
+
+    Tile & t = tiles[idx];
+    t.set_both(color, new_str);
+
+    s.color = color;
+    s.size = 1;
+    s.neighbors = 4;
+    s.first_tile = idx;
+    s.liberties = count_liberties(idx);
 }
 
-void Go::_do_undo() {
 
+void Go::_do_play(board_idx_t idx, Color color) {
+    board_idx_t n;
+    uint32_t n_idx;
+
+    // basically used to check whether there is 1 string to join or > 1, always
+    // set to the last idx of string that was found that we must join, and in
+    // case that string is adjacent to this tile in multiple directions, we
+    // don't double count it
+    uint32_t first_string_idx = -1;
+    uint8_t n_string_joins = 0;
+
+    n = idx_up(idx);
+    if (tiles[n].color() == color) {
+        n_idx = tiles[n].string_idx();
+        n_string_joins += first_string_idx != n_idx;
+        first_string_idx = n_idx;
+    }
+
+    n = idx_left(idx);
+    if (tiles[n].color() == color) {
+        n_idx = tiles[n].string_idx();
+        n_string_joins += first_string_idx != n_idx;
+        first_string_idx = n_idx;
+    }
+
+    n = idx_right(idx);
+    if (tiles[n].color() == color) {
+        n_idx = tiles[n].string_idx();
+        n_string_joins += first_string_idx != n_idx;
+        first_string_idx = n_idx;
+    }
+
+    n = idx_down(idx);
+    if (tiles[n].color() == color) {
+        n_idx = tiles[n].string_idx();
+        n_string_joins += first_string_idx != n_idx;
+        first_string_idx = n_idx;
+    }
+
+
+    if (n_string_joins == 0) {
+        place_lone_tile(idx, color);
+    }
+    else if (n_string_joins == 1) {
+        Tile & t = tiles[idx];
+        // join with the one adjacent string
+        t.set_color(color);
+        append_string(idx, first_string_idx);
+    }
+    else {
+        // join all strings we are connected to together
+        merge_strings(idx, color, first_string_idx);
+    }
+}
+
+
+void Go::_do_undo() {
+    assert(0);
 }
 
 
