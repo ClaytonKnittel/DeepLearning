@@ -9,12 +9,16 @@
 
 
 
+
+
 struct Tile {
+    static constexpr const uint8_t num_neighbors = 4;
+
     uint32_t data;
 
-    // when this tile has a stone on it, next_tile is a pointer to the next
-    // tile in a list of all stones in a string
-    board_idx_t next_tile;
+    // when this tile has a stone on it, the tiles are linked in a list of
+    // all stones in a string, sorted by the tile's index
+    board_idx_t next_tile, prev_tile;
 
     Color color() const {
         return static_cast<Color>(data & Go::tile_mask);
@@ -43,7 +47,7 @@ struct Tile {
 
 
 
-struct TileString {
+struct __attribute__((aligned(sizeof(uint64_t)))) TileString {
     // when color is set to this, this TileString is "free"
     static constexpr const int unused = Color::num_states;
     // only record the exact locations of up to 8 liberties
@@ -63,10 +67,6 @@ struct TileString {
 
             // number of stones in the string
             int size;
-
-            // the number of empty or occupied tiles adjacent to at least one
-            // stone in this string
-            int neighbors;
 
             // the number of empty tiles adjacent to this string
             int liberties;
@@ -118,15 +118,15 @@ bool Go::color_equals(board_idx_t idx, Color color) const {
 }
 
 
+bool Go::is_liberty(board_idx_t idx) const {
+    return tiles[idx].color() == Color::empty;
+}
+
+
 
 int Go::string_size(board_idx_t idx) const {
     const TileString & s = this->strings[idx];
     return s.size;
-}
-
-int Go::num_neighbors(board_idx_t idx) const {
-    const TileString & s = this->strings[idx];
-    return s.neighbors;
 }
 
 int Go::num_liberties(board_idx_t idx) const {
@@ -135,7 +135,7 @@ int Go::num_liberties(board_idx_t idx) const {
 }
 
 
-int Go::count_liberties(board_idx_t idx) const {
+int Go::count_adj_liberties(board_idx_t idx) const {
     uint32_t n;
     int tot = 0;
 
@@ -205,12 +205,116 @@ void Go::free_string(uint32_t string_ident) {
 }
 
 
+void Go::append_string(board_idx_t idx, uint32_t string_idx) {
+    board_idx_t prev_tile, tile;
+
+    tile = strings[string_idx].first_tile;
+    if (idx < tile) {
+        strings[string_idx].first_tile = idx;
+
+        prev_tile = tiles[tile].prev_tile;
+    }
+    else {
+        do {
+            prev_tile = tile;
+            tile = tiles[tile].next_tile;
+        } while (idx < tile);
+    }
+
+    tiles[prev_tile].next_tile = idx;
+    tiles[tile].prev_tile = idx;
+
+    tiles[idx].next_tile = tile;
+    tiles[idx].prev_tile = prev_tile;
+
+    TileString & s = strings[string_idx];
+    // help the compiler out a bit :)
+#define n tile
+    if (s.liberties <= TileString::tracked_liberties) {
+        // keep a queue of elements popped from the liberty_list in s
+        board_idx_t pop_queue[TileString::tracked_liberties];
+        board_idx_t new_queue[Tile::num_neighbors];
+
+        uint8_t nq_size = 0;
+
+        n = idx_up(idx);
+        if (is_liberty(n)) {
+            new_queue[nq_size] = n;
+            nq_size++;
+        }
+
+        n = idx_left(idx);
+        if (is_liberty(n)) {
+            new_queue[nq_size] = n;
+            nq_size++;
+        }
+
+        n = idx_right(idx);
+        if (is_liberty(n)) {
+            new_queue[nq_size] = n;
+            nq_size++;
+        }
+
+        n = idx_down(idx);
+        if (is_liberty(n)) {
+            new_queue[nq_size] = n;
+            nq_size++;
+        }
+
+        uint8_t nq_idx = 0, pq_idx = 0, list_idx = 0;
+        uint8_t liberty_count = 0;
+
+        static_assert(TileString::tracked_liberties == 8);
+        // we know TileString's are aligned by 8 bytes, so we can copy the
+        // entirety of liberty_list with two 8-byte memory transfers
+        *((uint64_t *) &pop_queue[0]) = *((uint64_t *) &s.liberty_list[0]);
+        *((uint64_t *) &pop_queue[4]) = *((uint64_t *) &s.liberty_list[4]);
+
+        while (list_idx < TileString::tracked_liberties &&
+                pq_idx < s.liberties && nq_idx < nq_size) {
+
+            uint8_t smaller = pop_queue[pq_idx] < new_queue[nq_idx] ?
+                pop_queue[pq_idx] : new_queue[nq_idx];
+            s.liberty_list[list_idx] = smaller;
+
+            pq_idx += pop_queue[pq_idx] == smaller;
+            nq_idx += new_queue[nq_idx] == smaller;
+
+            liberty_count++;
+        }
+        while (pq_idx < s.liberties) {
+            if (list_idx < TileString::tracked_liberties) {
+                s.liiberty_list[list_idx] = pop_queue[pq_idx];
+                list_idx++;
+            }
+            pq_idx++;
+            liberty_count++;
+        }
+        while (nq_idx < nq_size) {
+            if (list_idx < TileString::tracked_liberties) {
+                s.liiberty_list[list_idx] = new_queue[nq_idx];
+                list_idx++;
+            }
+            nq_idx++;
+            liberty_count++;
+        }
+
+        s.liberties = liberty_count;
+    }
+    else {
+
+    }
+#undef n
+}
+
+
 void Go::join_strings(uint32_t s1, uint32_t s2) {
 
 }
 
 
-void Go::merge_strings(board_idx_t idx, Color color, uint32_t string_idx) {
+void Go::merge_strings_around(board_idx_t idx, Color color,
+        uint32_t string_idx) {
     board_idx_t n;
     uint32_t o_str_idx;
 
@@ -221,6 +325,18 @@ void Go::merge_strings(board_idx_t idx, Color color, uint32_t string_idx) {
     }
 
     n = idx_left(idx);
+    if (tiles[n].color() == color &&
+            (o_str_idx = tiles[n].string_idx()) != string_idx) {
+        join_strings(string_idx, o_str_idx);
+    }
+
+    n = idx_right(idx);
+    if (tiles[n].color() == color &&
+            (o_str_idx = tiles[n].string_idx()) != string_idx) {
+        join_strings(string_idx, o_str_idx);
+    }
+
+    n = idx_down(idx);
     if (tiles[n].color() == color &&
             (o_str_idx = tiles[n].string_idx()) != string_idx) {
         join_strings(string_idx, o_str_idx);
@@ -299,12 +415,6 @@ const char * Go::tile_repr_at(coord_t x, coord_t y) const {
 }
 
 
-void Go::set_tile_at(coord_t x, coord_t y, Color t) {
-    board_idx_t idx = to_idx(x, y);
-    Tile & tile = tiles[idx];
-    tile.set_color(t);
-}
-
 
 bool Go::move_is_suicide(board_idx_t idx, Color color) const {
     board_idx_t n;
@@ -349,12 +459,12 @@ void Go::place_lone_tile(board_idx_t idx, Color color) {
 
     Tile & t = tiles[idx];
     t.set_both(color, new_str);
+    t.next_tile = t.prev_tile = idx;
 
     s.color = color;
     s.size = 1;
-    s.neighbors = 4;
     s.first_tile = idx;
-    s.liberties = count_liberties(idx);
+    s.liberties = count_adj_liberties(idx);
 }
 
 
@@ -409,7 +519,7 @@ void Go::_do_play(board_idx_t idx, Color color) {
     }
     else {
         // join all strings we are connected to together
-        merge_strings(idx, color, first_string_idx);
+        merge_strings_around(idx, color, first_string_idx);
     }
 }
 

@@ -89,16 +89,16 @@ private:
      */
     bool color_equals(board_idx_t idx, Color color) const;
 
+    /*
+     * returns true iff the tile at idx is a liberty (i.e. is empty)
+     */
+    bool is_liberty(board_idx_t idx) const;
+
 
     /*
      * returns the size of the string at idx
      */
     int string_size(board_idx_t idx) const;
-
-    /*
-     * returns the number of neighbors the string at idx has
-     */
-    int num_neighbors(board_idx_t idx) const;
 
     /*
      * returns the number of liberties in the string at idx
@@ -111,7 +111,7 @@ private:
      * returns a number 0-4, counting only the number of empty tiles
      * immediately around this tile)
      */
-    int count_liberties(board_idx_t idx) const;
+    int count_adj_liberties(board_idx_t idx) const;
 
 
     /*
@@ -149,7 +149,8 @@ private:
      * merge all strings adjacent to this tile which are the color "color"
      * into the string "string_idx", and set the tile at idx to "color"
      */
-    void merge_strings(board_idx_t idx, Color color, uint32_t string_idx);
+    void merge_strings_around(board_idx_t idx, Color color,
+            uint32_t string_idx);
 
 
     /*
@@ -173,12 +174,6 @@ private:
      * returns string representation of tile at given coordinates
      */
     const char * tile_repr_at(coord_t x, coord_t y) const;
-
-    /*
-     * sets the tile at (x, y) on the board to t
-     */
-    void set_tile_at(coord_t x, coord_t y, Color t);
-
 
     /*
      * checks whether the move is suicidal
