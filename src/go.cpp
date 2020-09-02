@@ -1,4 +1,5 @@
 
+#include <cassert>
 #include <iostream>
 #include <iomanip>
 
@@ -7,32 +8,212 @@
 #include <util/util.h>
 
 
-int Go::get_board_size() const {
-    return util::align_up(Go::tile_width * this->w * this->h,
-            8 * sizeof(go_board_bitv_t)) / (8 * sizeof(go_board_bitv_t));
+
+struct Tile {
+    uint32_t data;
+
+    Color color() const {
+        return static_cast<Color>(data & Go::tile_mask);
+    }
+
+    void set_color(Color t) {
+        data = (data & ~Go::tile_mask) | ((uint32_t) data);
+    }
+
+    uint32_t string_idx() const {
+        return data >> Go::tile_width;
+    }
+
+    void set_string_idx(uint32_t idx) {
+        data = (data & Go::tile_mask) | (idx << Go::tile_width);
+    }
+};
+
+
+
+struct TileString {
+    // when color is set to this, this TileString is "free"
+    static constexpr const int unused = Color::num_states;
+
+    // which team the string belongs to, either black or white
+    int color;
+
+    union {
+        // when this TileString is "allocated"
+        struct {
+
+            // number of stones in the string
+            int size;
+
+            // the number of empty or occupied tiles adjacent to at least one stone in
+            // this string
+            int neighbors;
+
+            // the number of empty tiles adjacent to this string
+            int liberties;
+
+        };
+        // when this TileString is "free"
+        struct {
+            // index of next free TileString in list of free TileStrings
+            int next_free;
+        };
+    };
+};
+
+
+
+board_idx_t Go::to_idx(coord_t x, coord_t y) const {
+    return (y + 1) * this->w + (x + 1);
 }
 
 
-Tile Go::tile_at(coord_t x, coord_t y) const {
-    constexpr const uint32_t tiles_per_bitv = 8 * sizeof(go_board_bitv_t) / Go::tile_width;
-    uint32_t idx = y * this->w + x;
-    uint32_t tile_idx = idx / tiles_per_bitv;
-    uint32_t bit_idx = Go::tile_width * (idx % tiles_per_bitv);
+board_idx_t Go::idx_up(board_idx_t idx) const {
+    return idx + this->w;
+}
 
-    go_board_bitv_t ret = (this->board[tile_idx] >> bit_idx) & tile_mask;
-    assert(ret < Tile::num_states);
-    return static_cast<Tile>(ret);
+board_idx_t Go::idx_down(board_idx_t idx) const {
+    return idx - this->w;
+}
+
+board_idx_t Go::idx_left(board_idx_t idx) const {
+    return idx - 1;
+}
+
+board_idx_t Go::idx_right(board_idx_t idx) const {
+    return idx + 1;
+}
+
+
+
+
+bool Go::color_matches(board_idx_t idx, Color color) const {
+    return (tiles[idx].color() & color) != 0;
+}
+
+bool Go::color_equals(board_idx_t idx, Color color) const {
+    return tiles[idx].color() == color;
+}
+
+
+
+int Go::string_size(board_idx_t idx) const {
+    const TileString & s = this->strings[idx];
+    return s.size;
+}
+
+int Go::num_neighbors(board_idx_t idx) const {
+    const TileString & s = this->strings[idx];
+    return s.neighbors;
+}
+
+int Go::num_liberties(board_idx_t idx) const {
+    const TileString & s = this->strings[idx];
+    return s.liberties;
+}
+
+
+
+/*
+ * the board can be packed like so
+ *
+ * xo.oxo
+ * oxox.x
+ * x.xoxo
+ * oxo.ox
+ *
+ * and so on, which can be tiled by the shape
+ *
+ * oxo
+ * x.x
+ * oxo
+ * .
+ *
+ * which is 4/5 dense with stones
+ */
+uint32_t Go::calc_max_n_strings() const {
+    return (this->w * this->h * 4 + 4) / 5;
+}
+
+
+void Go::init_strings() {
+    // all strings are free
+    this->free_strings = 0;
+
+    for (int i = 0; i < this->max_n_strings; i++) {
+        TileString & s = this->strings[i];
+        s.color = TileString::unused;
+        s.next_free = (i == this->max_n_strings - 1) ? -1 : i + 1;
+    }
+}
+
+
+uint32_t Go::alloc_string() {
+    uint32_t ret = this->free_strings;
+    assert(ret != -1);
+    assert(this->strings[this->free_strings].color == TileString::unused);
+    this->free_strings = this->strings[this->free_strings].next_free;
+    return ret;
+}
+
+
+void Go::free_string(uint32_t string_ident) {
+    TileString & s = this->strings[string_ident];
+    s.color = TileString::unused;
+    s.next_free = this->free_strings;
+    this->free_strings = string_ident;
+}
+
+
+void Go::__assign_memory() {
+    tiles = (struct Tile *) util::align_up(((uint64_t) g_data),
+            Go::g_data_alignment);
+    strings = (struct TileString *) util::align_up((uint64_t) (tiles + this->n_tiles),
+                Go::g_data_alignment);
+}
+
+
+void Go::clear() {
+    __builtin_memset(this->tiles, 0, this->n_tiles * sizeof(Tile));
+
+    board_idx_t idx = 0;
+    // top row
+    while (idx < this->w + 2) {
+        tiles[idx].set_color(gray);
+        idx++;
+    }
+    // two columns
+    while (idx < this->n_tiles - this->w) {
+        tiles[idx].set_color(gray);
+        idx += this->w + 1;
+        tiles[idx].set_color(gray);
+        idx++;
+    }
+    // bottom row
+    while (idx < this->n_tiles) {
+        tiles[idx].set_color(gray);
+        idx++;
+    }
+
+    init_strings();
+}
+
+
+Color Go::tile_at(coord_t x, coord_t y) const {
+    board_idx_t idx = to_idx(x, y);
+    const Tile & t = tiles[idx];
+    return t.color();
 }
 
 
 const char * Go::tile_repr_at(coord_t x, coord_t y) const {
-    const static char black_str[] = "b";
-    const static char white_str[] = "w";
+    const static char black_str[] = "\033[0;94mO\033[0;39m";
+    const static char white_str[] = "\033[0;91mO\033[0;39m";
     const static char empty_str[] = " ";
 
     const char * ret;
 
-    Tile tile = this->tile_at(x, y);
+    Color tile = this->tile_at(x, y);
 
     switch (tile) {
         case empty:
@@ -45,32 +226,89 @@ const char * Go::tile_repr_at(coord_t x, coord_t y) const {
             ret = white_str;
             break;
         default:
+            fprintf(stderr, "No such tile %d\n", tile);
             assert(0);
     }
     return ret;
 }
 
 
-
-void Go::_play(GoMove & m) {
-
-}
-
-void Go::_undo(GoMove & m) {
-
+void Go::set_tile_at(coord_t x, coord_t y, Color t) {
+    board_idx_t idx = to_idx(x, y);
+    Tile & tile = tiles[idx];
+    tile.set_color(t);
 }
 
 
-Go::Go(coord_t w, coord_t h) : w(w), h(h), board_size(get_board_size()) {
-    board = new go_board_bitv_t[board_size]();
-    printf("game %dx%d, board size %u, tile_width: %d, int width: %lu\n", w, h,
-            board_size, Go::tile_width, sizeof(go_board_bitv_t) * 8);
-    assert(this->w * this->h * Go::tile_width <= 8 * sizeof(go_board_bitv_t) * board_size);
+bool Go::move_is_suicide(board_idx_t idx, Color color) const {
+    board_idx_t n;
+    Color c;
+
+    n = idx_up(idx);
+    c = tiles[idx].color();
+    if (c == Color::empty || (c != Color::gray &&
+                ((num_liberties(n) == 1) ^ (c == color)))) {
+        return false;
+    }
+
+    n = idx_left(idx);
+    c = tiles[idx].color();
+    if (c == Color::empty || (c != Color::gray &&
+                ((num_liberties(n) == 1) ^ (c == color)))) {
+        return false;
+    }
+
+    n = idx_right(idx);
+    c = tiles[idx].color();
+    if (c == Color::empty || (c != Color::gray &&
+                ((num_liberties(n) == 1) ^ (c == color)))) {
+        return false;
+    }
+
+    n = idx_down(idx);
+    c = tiles[idx].color();
+    if (c == Color::empty || (c != Color::gray &&
+                ((num_liberties(n) == 1) ^ (c == color)))) {
+        return false;
+    }
+
+    return true;
+}
+
+void Go::_do_play(board_idx_t idx, Color color) {
+
+}
+
+void Go::_do_undo() {
+
+}
+
+
+Go::Go(coord_t w, coord_t h) : w(w), h(h) {
+    // includes the borders
+    this->n_tiles = (this->w + 2) * (this->h + 2);
+    this->max_n_strings = this->calc_max_n_strings();
+    this->g_data_size = util::align_up((uint64_t) (this->n_tiles * sizeof(Tile)),
+            Go::g_data_alignment) +
+        this->max_n_strings * sizeof(TileString);
+
+    g_data = malloc(g_data_size + Go::g_data_alignment);
+    this->__assign_memory();
+    this->clear();
+}
+
+
+Go::Go(const Go & g) : w(g.w), h(g.h), g_data_size(g.g_data_size),
+        n_tiles(g.n_tiles), max_n_strings(g.max_n_strings),
+        free_strings(g.free_strings) {
+    this->g_data = malloc(g_data_size + Go::g_data_alignment);
+    __builtin_memcpy(this->g_data, g.g_data, g_data_size);
+    this->__assign_memory();
 }
 
 
 Go::~Go() {
-    delete [] board;
+    free(g_data);
 }
 
 
@@ -88,12 +326,17 @@ bool Go::max_player() const {
 
 void Go::play(GameMove & m) {
     GoMove & gm = dynamic_cast<GoMove &>(m);
-    this->_play(gm);
+    board_idx_t idx = to_idx(gm.x, gm.y);
+
+    assert(!move_is_suicide(idx, gm.color));
+
+    this->_do_play(idx, gm.color);
 }
 
 void Go::undo(GameMove & m) {
     GoMove & gm = dynamic_cast<GoMove &>(m);
-    this->_undo(gm);
+    (void) gm;
+    this->_do_undo();
 }
 
 void Go::for_each_legal_move(std::function<void(Game &, GameMove &)> f) {
@@ -122,7 +365,6 @@ void Go::print(std::ostream & o) const {
 
 
     uint32_t row_idc_width = util::log10(this->h);
-    printf("width: %u (%d)\n", row_idc_width, this->h);
 
     o << std::setw(row_idc_width + 1) << "";
     for (int c = 0; c < this->w; c++) {

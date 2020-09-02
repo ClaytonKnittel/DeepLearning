@@ -3,7 +3,7 @@ include common.mk
 SDIR=src
 ODIR=.obj
 
-SLIB=$(LIB_DIR)/libutil.a
+SLIB=$(LIB_DIR)/libgame.a
 
 
 SRC=$(shell find $(SDIR) -type f -name '*.cpp')
@@ -22,11 +22,15 @@ DEPFILES=$(SRC:$(SDIR)/%.cpp=$(ODIR)/%.d)
 
 
 .PHONY: all
-all: cppflow $(SLIB) tests
+all: cppflow utils $(SLIB) tests
 
 .PHONY: cppflow
 cppflow:
 	(make -C $(CPPFLOW_DIR) BASE_DIR=$(BASE_DIR) LIB_DIR=$(LIB_DIR))
+
+.PHONY: utils
+utils:
+	(make -C $(UTIL_DIR))
 
 .PHONY: tests
 tests:
@@ -49,6 +53,7 @@ clean:
 	rm -rf $(LIB_DIR)
 	rm -rf $(BIN_DIR)
 	(make -C $(TEST_DIR) clean)
+	(make -C $(UTIL_DIR) clean)
 	(make -C $(CPPFLOW_DIR) clean)
 
 

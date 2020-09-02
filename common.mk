@@ -19,5 +19,5 @@ else
 CFLAGS=-std=c++17 -O0 -Wall -Wno-unused-function -MMD -MP -g3 -DDEBUG
 endif
 
-LDFLAGS=-flto -L$(LIB_DIR) -ltensorflow -lcppflow
+LDFLAGS=-flto -L$(LIB_DIR) -L$(BASE_DIR)/utils/lib -ltensorflow -lcppflow -lutil
 
