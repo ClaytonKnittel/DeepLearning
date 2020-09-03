@@ -94,6 +94,28 @@ private:
      */
     bool is_liberty(board_idx_t idx) const;
 
+    /*
+     * returns true iff the tile at idx is either a white or black stone
+     */
+    bool is_stone(board_idx_t idx) const;
+
+    /*
+     * mark a free tile as "seen", must later be undone to return the board
+     * to the correct state
+     */
+    void mark_free_tile(board_idx_t idx);
+
+    /*
+     * inverse of mark_free_tile
+     */
+    void unmark_free_tile(board_idx_t idx);
+
+    /*
+     * returns true if the given tile was marked, or undefined behavior when
+     * called on a tile that is not empty
+     */
+    bool is_marked(board_idx_t idx) const;
+
 
     /*
      * returns the size of the string at idx
@@ -133,6 +155,21 @@ private:
      * frees a string struct back to the freelist
      */
     void free_string(uint32_t string_ident);
+
+
+    /*
+     * merges the two liberty lists l1 and l2 into dst, returning the total
+     * number of unique liberties between the two lists
+     */
+    static uint32_t liberty_list_merge(board_idx_t * dst, uint32_t dst_len,
+            board_idx_t * l1, uint32_t l1_len,
+            board_idx_t * l2, uint32_t l2_len);
+
+
+    /*
+     * calculates all metainformation of the string from scratch
+     */
+    void recompute_string(uint32_t string_idx);
 
 
     /*
@@ -198,6 +235,11 @@ private:
      */
     void _do_undo();
 
+
+    void _print(std::ostream &,
+        const std::function<const char *(int, int)> & print_fn,
+        int piece_width) const;
+
 public:
 
     Go(coord_t w, coord_t h);
@@ -207,6 +249,15 @@ public:
     Go(Go && g) = default;
 
     virtual ~Go();
+
+    uint32_t width() const {
+        return w;
+    }
+
+    uint32_t height() const {
+        return h;
+    }
+
 
     virtual bool game_over() const;
 
@@ -222,6 +273,8 @@ public:
 
 
     virtual void print(std::ostream &) const;
+
+    void print_info(std::ostream &) const;
 
 };
 

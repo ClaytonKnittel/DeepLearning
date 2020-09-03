@@ -13,11 +13,14 @@
 
 struct Tile {
     static constexpr const uint8_t num_neighbors = 4;
+    static constexpr const board_idx_t list_end = 0xffffu;
 
     uint32_t data;
 
     // when this tile has a stone on it, the tiles are linked in a list of
     // all stones in a string, sorted by the tile's index
+    // when the color of tile is empty, these values are undefined and may be
+    // used to store temporary information
     board_idx_t next_tile, prev_tile;
 
     Color color() const {
@@ -35,6 +38,7 @@ struct Tile {
     void set_string_idx(uint32_t idx) {
         data = (data & Go::tile_mask) | (idx << Go::tile_width);
     }
+
 
     uint32_t get_both() const {
         return data;
@@ -86,7 +90,7 @@ struct __attribute__((aligned(sizeof(uint64_t)))) TileString {
 
 
 board_idx_t Go::to_idx(coord_t x, coord_t y) const {
-    return (y + 1) * this->w + (x + 1);
+    return (y + 1) * (this->w + 2) + (x + 1);
 }
 
 
@@ -120,6 +124,27 @@ bool Go::color_equals(board_idx_t idx, Color color) const {
 
 bool Go::is_liberty(board_idx_t idx) const {
     return tiles[idx].color() == Color::empty;
+}
+
+bool Go::is_stone(board_idx_t idx) const {
+    uint8_t col = (uint8_t) tiles[idx].color();
+    return (col ^ (col >> 1)) & 1;
+}
+
+
+void Go::mark_free_tile(board_idx_t idx) {
+    Tile & t = tiles[idx];
+    t.data |= Color::gray;
+}
+
+void Go::unmark_free_tile(board_idx_t idx) {
+    Tile & t = tiles[idx];
+    t.data &= ~Go::tile_mask;
+}
+
+bool Go::is_marked(board_idx_t idx) const {
+    const Tile & t = tiles[idx];
+    return (t.data & Color::gray) == Color::gray;
 }
 
 
@@ -205,9 +230,105 @@ void Go::free_string(uint32_t string_ident) {
 }
 
 
+uint32_t Go::liberty_list_merge(board_idx_t * dst, uint32_t dst_len,
+        board_idx_t * l1, uint32_t l1_len,
+        board_idx_t * l2, uint32_t l2_len) {
+
+    uint32_t dst_idx = 0, l1_idx = 0, l2_idx = 0;
+
+    while (l1_idx < l1_len && l2_idx < l2_len) {
+
+        uint8_t smaller = l1[l1_idx] < l2[l2_idx] ? l1[l1_idx] : l2[l2_idx];
+
+        if (dst_idx < dst_len) {
+            dst[dst_idx] = smaller;
+        }
+        dst_idx++;
+
+        l1_idx += l1[l1_idx] == smaller;
+        l2_idx += l2[l2_idx] == smaller;
+    }
+    while (l1_idx < l1_len) {
+        if (dst_idx < dst_len) {
+            dst[dst_idx] = l1[l1_idx];
+        }
+        dst_idx++;
+        l1_idx++;
+    }
+    while (l2_idx < l2_len) {
+        if (dst_idx < dst_len) {
+            dst[dst_idx] = l2[l2_idx];
+        }
+        dst_idx++;
+        l2_idx++;
+    }
+
+    return dst_idx;
+}
+
+
+void Go::recompute_string(uint32_t string_idx) {
+    TileString & s = strings[string_idx];
+
+    uint32_t n_liberties = 0;
+
+    /*
+     * iterate through every tile in the string, count up the number of
+     * liberties around the string, marking each liberty that is counted
+     * (so it won't be double counted) and chain together a list of these
+     * liberties to undo the markings afterward
+     */
+    board_idx_t n;
+    board_idx_t tile = s.first_tile;
+    board_idx_t last_lib = Tile::list_end;
+    do {
+        n = idx_up(tile);
+        if (is_liberty(n) && !is_marked(n)) {
+            n_liberties++;
+            mark_free_tile(n);
+            tiles[n].next_tile = last_lib;
+            last_lib = n;
+        }
+
+        n = idx_left(tile);
+        if (is_liberty(n) && !is_marked(n)) {
+            n_liberties++;
+            mark_free_tile(n);
+            tiles[n].next_tile = last_lib;
+            last_lib = n;
+        }
+
+        n = idx_right(tile);
+        if (is_liberty(n) && !is_marked(n)) {
+            n_liberties++;
+            mark_free_tile(n);
+            tiles[n].next_tile = last_lib;
+            last_lib = n;
+        }
+
+        n = idx_down(tile);
+        if (is_liberty(n) && !is_marked(n)) {
+            n_liberties++;
+            mark_free_tile(n);
+            tiles[n].next_tile = last_lib;
+            last_lib = n;
+        }
+
+        tile = tiles[tile].next_tile;
+    } while (tile != s.first_tile);
+
+    // undo markings
+    while (last_lib != Tile::list_end) {
+        unmark_free_tile(last_lib);
+        last_lib = tiles[last_lib].next_tile;
+    }
+}
+
+
 void Go::append_string(board_idx_t idx, uint32_t string_idx) {
     board_idx_t prev_tile, tile;
 
+    // add the tile at idx to the proper location in the string's list of tiles
     tile = strings[string_idx].first_tile;
     if (idx < tile) {
         strings[string_idx].first_tile = idx;
@@ -221,6 +342,7 @@ void Go::append_string(board_idx_t idx, uint32_t string_idx) {
         } while (idx < tile);
     }
 
+    // calculate the updated string's liberties
     tiles[prev_tile].next_tile = idx;
     tiles[tile].prev_tile = idx;
 
@@ -261,55 +383,143 @@ void Go::append_string(board_idx_t idx, uint32_t string_idx) {
             nq_size++;
         }
 
-        uint8_t nq_idx = 0, pq_idx = 0, list_idx = 0;
-        uint8_t liberty_count = 0;
-
         static_assert(TileString::tracked_liberties == 8);
         // we know TileString's are aligned by 8 bytes, so we can copy the
         // entirety of liberty_list with two 8-byte memory transfers
         *((uint64_t *) &pop_queue[0]) = *((uint64_t *) &s.liberty_list[0]);
         *((uint64_t *) &pop_queue[4]) = *((uint64_t *) &s.liberty_list[4]);
 
-        while (list_idx < TileString::tracked_liberties &&
-                pq_idx < s.liberties && nq_idx < nq_size) {
-
-            uint8_t smaller = pop_queue[pq_idx] < new_queue[nq_idx] ?
-                pop_queue[pq_idx] : new_queue[nq_idx];
-            s.liberty_list[list_idx] = smaller;
-
-            pq_idx += pop_queue[pq_idx] == smaller;
-            nq_idx += new_queue[nq_idx] == smaller;
-
-            liberty_count++;
-        }
-        while (pq_idx < s.liberties) {
-            if (list_idx < TileString::tracked_liberties) {
-                s.liiberty_list[list_idx] = pop_queue[pq_idx];
-                list_idx++;
-            }
-            pq_idx++;
-            liberty_count++;
-        }
-        while (nq_idx < nq_size) {
-            if (list_idx < TileString::tracked_liberties) {
-                s.liiberty_list[list_idx] = new_queue[nq_idx];
-                list_idx++;
-            }
-            nq_idx++;
-            liberty_count++;
-        }
-
-        s.liberties = liberty_count;
+        s.liberties = liberty_list_merge(s.liberty_list,
+                TileString::tracked_liberties,
+                pop_queue, s.liberties,
+                new_queue, nq_size);
     }
     else {
+        // need to check which of the neighbors are liberties and not adjacent
+        // to other tiles already in this string
 
+        n = idx_up(idx);
+        if (is_liberty(n)) {
+            if ((!is_stone(idx_up(n)) ||
+                        tiles[idx_up(n)].string_idx() != string_idx) &&
+                    (!is_stone(idx_left(n)) ||
+                        tiles[idx_left(n)].string_idx() != string_idx) &&
+                    (!is_stone(idx_right(n)) ||
+                        tiles[idx_right(n)].string_idx() != string_idx)) {
+
+                s.liberties++;
+            }
+        }
+        n = idx_left(idx);
+        if (is_liberty(n)) {
+            if ((!is_stone(idx_up(n)) ||
+                        tiles[idx_up(n)].string_idx() != string_idx) &&
+                    (!is_stone(idx_left(n)) ||
+                        tiles[idx_left(n)].string_idx() != string_idx) &&
+                    (!is_stone(idx_down(n)) ||
+                        tiles[idx_down(n)].string_idx() != string_idx)) {
+
+                s.liberties++;
+            }
+        }
+        n = idx_right(idx);
+        if (is_liberty(n)) {
+            if ((!is_stone(idx_up(n)) ||
+                        tiles[idx_up(n)].string_idx() != string_idx) &&
+                    (!is_stone(idx_right(n)) ||
+                        tiles[idx_right(n)].string_idx() != string_idx) &&
+                    (!is_stone(idx_down(n)) ||
+                        tiles[idx_down(n)].string_idx() != string_idx)) {
+
+                s.liberties++;
+            }
+        }
+        n = idx_down(idx);
+        if (is_liberty(n)) {
+            if ((!is_stone(idx_left(n)) ||
+                        tiles[idx_left(n)].string_idx() != string_idx) &&
+                    (!is_stone(idx_right(n)) ||
+                        tiles[idx_right(n)].string_idx() != string_idx) &&
+                    (!is_stone(idx_down(n)) ||
+                        tiles[idx_down(n)].string_idx() != string_idx)) {
+
+                s.liberties++;
+            }
+        }
     }
 #undef n
+
+    s.size++;
 }
 
 
 void Go::join_strings(uint32_t s1, uint32_t s2) {
+    TileString & str1 = strings[s1];
+    TileString & str2 = strings[s2];
 
+    // merge all tiles in str1 and str2
+    board_idx_t t1 = str1.first_tile, t2 = str2.first_tile;
+    // the first tile of the resultant string is the minimum of the two
+    // first tiles of each string
+    board_idx_t new_head = t1 < t2 ? t1 : t2;
+
+    // calculate the last tile in the resultant list, so we don't have to worry
+    // about linking the tail back to the head afterward
+    board_idx_t last_tile;
+    {
+        board_idx_t t1_last = tiles[t1].prev_tile;
+        board_idx_t t2_last = tiles[t2].prev_tile;
+        last_tile = t1_last < t2_last ? t1_last : t2_last;
+    }
+    while (t1 != str1.first_tile && t2 != str2.first_tile) {
+        board_idx_t next_tile;
+        if (t1 < t2) {
+            next_tile = t1;
+            t1 = tiles[t1].next_tile;
+        }
+        else {
+            next_tile = t2;
+            t2 = tiles[t2].next_tile;
+        }
+        
+        tiles[last_tile].next_tile = next_tile;
+        tiles[next_tile].prev_tile = last_tile;
+        last_tile = next_tile;
+    }
+    // finish up whatever's left in whichever list wasn't emptied
+    while (t1 != str1.first_tile) {
+        tiles[last_tile].next_tile = t1;
+        tiles[t1].prev_tile = last_tile;
+        t1 = tiles[t1].next_tile;
+    }
+    while (t2 != str2.first_tile) {
+        tiles[last_tile].next_tile = t2;
+        tiles[t2].prev_tile = last_tile;
+        t2 = tiles[t2].next_tile;
+    }
+
+    // lastly link the string to the head of the new list
+    str1.first_tile = new_head;
+
+
+    if (str1.liberties <= TileString::tracked_liberties &&
+            str2.liberties <= TileString::tracked_liberties) {
+        board_idx_t s1_buf[TileString::tracked_liberties];
+
+        static_assert(TileString::tracked_liberties == 8);
+        // we know TileString's are aligned by 8 bytes, so we can copy the
+        // entirety of liberty_list with two 8-byte memory transfers
+        *((uint64_t *) &s1_buf[0]) = *((uint64_t *) &str1.liberty_list[0]);
+        *((uint64_t *) &s1_buf[4]) = *((uint64_t *) &str1.liberty_list[4]);
+
+        str1.liberties = liberty_list_merge(str1.liberty_list,
+                TileString::tracked_liberties,
+                s1_buf, str1.liberties,
+                str2.liberty_list, str2.liberties);
+    }
+    else {
+        recompute_string(s1);
+    }
 }
 
 
@@ -529,6 +739,76 @@ void Go::_do_undo() {
 }
 
 
+void Go::_print(std::ostream & o,
+        const std::function<const char *(int, int)> & print_fn,
+        int piece_width) const {
+
+    const static char TOP_LEFT[] = "\u250C\u2500\u2500\u2500";
+    const static char TOP_CONNECTOR[] = "\u252C\u2500\u2500\u2500";
+    const static char TOP_RIGHT[] = "\u2510";
+
+    const static char MIDDLE_LEFT[] = "\u251C\u2500\u2500\u2500";
+    const static char MIDDLE_CONNECTOR[] = "\u253C\u2500\u2500\u2500";
+    const static char MIDDLE_RIGHT[] = "\u2524";
+
+    const static char VBAR[] = "\u2502";
+
+    const static char BOTTOM_LEFT[] = "\u2514\u2500\u2500\u2500";
+    const static char BOTTOM_CONNECTOR[] = "\u2534\u2500\u2500\u2500";
+    const static char BOTTOM_RIGHT[] = "\u2518";
+
+
+    const static char COL_INDICATORS[] = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
+
+
+
+    uint32_t row_idc_width = util::log10(this->h);
+
+    o << std::setw(row_idc_width + 1) << "";
+    for (int c = 0; c < this->w; c++) {
+        o << "  " << COL_INDICATORS[c] << " ";
+    }
+    o << '\n';
+
+    o << std::setw(row_idc_width + 1) << "" << TOP_LEFT;
+    for (int c = 1; c < this->w; c++) {
+        o << TOP_CONNECTOR;
+    }
+    o << TOP_RIGHT << '\n';
+
+
+    for (int r = this->h - 1; r >= 0; r--) {
+        o << std::setw(row_idc_width) << r + 1 << " " << VBAR;
+        for (int c = 0; c < this->w; c++) {
+            if (piece_width < 3) {
+                o << " ";
+            }
+            o << print_fn(r, c);
+            if (piece_width == 1) {
+                o << " ";
+            }
+            o << VBAR;
+        }
+        o << '\n';
+
+        if (r != 0) {
+            o << std::setw(row_idc_width + 1) << "" << MIDDLE_LEFT;
+            for (int c = 1; c < this->w; c++) {
+                o << MIDDLE_CONNECTOR;
+            }
+            o << MIDDLE_RIGHT << '\n';
+        }
+    }
+
+    o << std::setw(row_idc_width + 1) << "" << BOTTOM_LEFT;
+    for (int c = 1; c < this->w; c++) {
+        o << BOTTOM_CONNECTOR;
+    }
+    o << BOTTOM_RIGHT;
+}
+
+
+
 Go::Go(coord_t w, coord_t h) : w(w), h(h) {
     // includes the borders
     this->n_tiles = (this->w + 2) * (this->h + 2);
@@ -590,61 +870,25 @@ void Go::for_each_legal_move(std::function<void(Game &, GameMove &)> f) {
 
 
 void Go::print(std::ostream & o) const {
-    const static char TOP_LEFT[] = "\u250C\u2500\u2500\u2500";
-    const static char TOP_CONNECTOR[] = "\u252C\u2500\u2500\u2500";
-    const static char TOP_RIGHT[] = "\u2510";
+    this->_print(o,
+            [&](int r, int c) -> const char* {
+                return this->tile_repr_at(c, r);
+            }, 1);
+}
 
-    const static char MIDDLE_LEFT[] = "\u251C\u2500\u2500\u2500";
-    const static char MIDDLE_CONNECTOR[] = "\u253C\u2500\u2500\u2500";
-    const static char MIDDLE_RIGHT[] = "\u2524";
+void Go::print_info(std::ostream & o) const {
+    this->_print(o,
+            [&](int r, int c) -> const char * {
+                static char buf[32];
+                const char * p = this->tile_repr_at(c, r);
+                strcpy(buf, p);
 
-    const static char VBAR[] = "\u2502";
-
-    const static char BOTTOM_LEFT[] = "\u2514\u2500\u2500\u2500";
-    const static char BOTTOM_CONNECTOR[] = "\u2534\u2500\u2500\u2500";
-    const static char BOTTOM_RIGHT[] = "\u2518";
-
-
-    const static char COL_INDICATORS[] = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
-
-
-
-    uint32_t row_idc_width = util::log10(this->h);
-
-    o << std::setw(row_idc_width + 1) << "";
-    for (int c = 0; c < this->w; c++) {
-        o << "  " << COL_INDICATORS[c] << " ";
-    }
-    o << '\n';
-
-    o << std::setw(row_idc_width + 1) << "" << TOP_LEFT;
-    for (int c = 1; c < this->w; c++) {
-        o << TOP_CONNECTOR;
-    }
-    o << TOP_RIGHT << '\n';
-
-
-    for (int r = this->h - 1; r >= 0; r--) {
-        o << std::setw(row_idc_width) << r + 1 << " " << VBAR;
-        for (int c = 0; c < this->w; c++) {
-            o << " " << this->tile_repr_at(c, r) << " " << VBAR;
-        }
-        o << '\n';
-
-        if (r != 0) {
-            o << std::setw(row_idc_width + 1) << "" << MIDDLE_LEFT;
-            for (int c = 1; c < this->w; c++) {
-                o << MIDDLE_CONNECTOR;
-            }
-            o << MIDDLE_RIGHT << '\n';
-        }
-    }
-
-    o << std::setw(row_idc_width + 1) << "" << BOTTOM_LEFT;
-    for (int c = 1; c < this->w; c++) {
-        o << BOTTOM_CONNECTOR;
-    }
-    o << BOTTOM_RIGHT;
+                size_t p_len = strlen(p);
+                snprintf(buf + p_len, sizeof(buf) - p_len,
+                        "%2d", is_liberty(to_idx(c, r)) ? 0 :
+                        num_liberties(to_idx(c, r)));
+                return buf;
+            }, 3);
 }
 
 
