@@ -169,7 +169,7 @@ int Go::string_size(board_idx_t idx) const {
 }
 
 int Go::num_liberties(board_idx_t idx) const {
-    const TileString & s = this->strings[idx];
+    const TileString & s = this->strings[tiles[idx].string_idx()];
     return s.liberties;
 }
 
@@ -177,6 +177,8 @@ int Go::num_liberties(board_idx_t idx) const {
 int Go::count_adj_liberties(board_idx_t idx) const {
     uint32_t n;
     int tot = 0;
+
+    speak("counting adjacent liberties at %d\n", idx);
 
     n = idx_up(idx);
     tot += tiles[n].color() == Color::empty;
@@ -186,6 +188,8 @@ int Go::count_adj_liberties(board_idx_t idx) const {
     tot += tiles[n].color() == Color::empty;
     n = idx_down(idx);
     tot += tiles[n].color() == Color::empty;
+
+    speak("  found %d\n", tot);
 
     return tot;
 }
@@ -232,6 +236,8 @@ uint32_t Go::alloc_string() {
     assert(this->strings[this->free_strings].color == TileString::unused);
     this->free_strings = this->strings[this->free_strings].next_free;
 
+    speak("allocated string %d\n", ret);
+
     return ret;
 }
 
@@ -241,6 +247,8 @@ void Go::free_string(uint32_t string_ident) {
     s.color = TileString::unused;
     s.next_free = this->free_strings;
     this->free_strings = string_ident;
+
+    speak("freed string %d\n", string_ident);
 }
 
 
@@ -691,6 +699,8 @@ bool Go::move_is_suicide(board_idx_t idx, Color color) const {
 
 
 void Go::place_lone_tile(board_idx_t idx, Color color) {
+    speak("placing lone tile at %d\n", idx);
+
     // need to allocate a new string for this tile
     uint32_t new_str = alloc_string();
     TileString & s = strings[new_str];
@@ -716,6 +726,8 @@ void Go::_do_play(board_idx_t idx, Color color) {
     // don't double count it
     uint32_t first_string_idx = -1;
     uint8_t n_string_joins = 0;
+
+    speak("_do_play at %d\n", idx);
 
     n = idx_up(idx);
     if (tiles[n].color() == color) {
@@ -913,9 +925,10 @@ void Go::print_info(std::ostream & o) const {
                 strcpy(buf, p);
 
                 size_t p_len = strlen(p);
-                snprintf(buf + p_len, sizeof(buf) - p_len,
-                        "%2d", is_liberty(to_idx(c, r)) ? 0 :
+                uint32_t cnt = (is_liberty(to_idx(c, r)) ? 0 :
                         num_liberties(to_idx(c, r)));
+                snprintf(buf + p_len, sizeof(buf) - p_len,
+                        "%2u", cnt);
                 return buf;
             }, 3);
 }
