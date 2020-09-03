@@ -373,6 +373,44 @@ void Go::recompute_string(uint32_t string_idx) {
 }
 
 
+void Go::erase_string(uint32_t string_idx) {
+
+}
+
+
+void Go::remove_liberty(uint32_t string_idx, board_idx_t idx) {
+
+}
+
+
+void Go::add_liberty(uint32_t string_idx, board_idx_t idx) {
+
+}
+
+
+void Go::subtract_liberties(board_idx_t idx, Color color) {
+    board_idx_t n;
+    Color o = other_color(color);
+
+    // to be set if the string for the tile in the corresponding direction
+    // had a liberty taken away (so we don't double count any strings which
+    // are adjacent in multiple directions)
+    uint32_t up_str = 0xffffffffu;
+    uint32_t left_str = 0xffffffffu;
+    uint32_t right_str = 0xffffffffu;
+
+    n = idx_up(idx);
+    if (is_stone(n)) {
+        up_str = tiles[n].string_idx();
+        remove_liberty(up_str, n);
+        if (tiles[n].color() == o && strings[up_str].liberties == 0) {
+            erase_string(up_str);
+        }
+    }
+    // TODO rest
+}
+
+
 void Go::append_string(board_idx_t idx, Color color, uint32_t string_idx) {
     board_idx_t prev_tile, tile;
 
@@ -814,6 +852,8 @@ void Go::_do_play(board_idx_t idx, Color color) {
         // join all strings we are connected to together
         merge_strings_around(idx, color, first_string_idx);
     }
+
+    subtract_liberties(idx, color);
 }
 
 

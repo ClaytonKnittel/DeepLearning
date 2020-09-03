@@ -23,6 +23,13 @@ enum Color {
     num_states = 4
 };
 
+/*
+ * assuming c is either black or white, returns the other of the two
+ */
+static Color other_color(Color c) {
+    return (Color) (3 - ((uint8_t) c));
+}
+
 
 class GoMove : public GameMove {
 public:
@@ -182,6 +189,32 @@ private:
      * calculates all metainformation of the string from scratch
      */
     void recompute_string(uint32_t string_idx);
+
+
+    /*
+     * removes a string of stones from the board, setting each of the tiles
+     * in the string to empty and updating the liberties of all strings that
+     * were touching the string
+     */
+    void erase_string(uint32_t string_idx);
+
+    /*
+     * removes the stone at idx from the string's list of liberties
+     */
+    void remove_liberty(uint32_t string_idx, board_idx_t idx);
+
+    /*
+     * adds the empty tile at idx to the string's list of liberties
+     */
+    void add_liberty(uint32_t string_idx, board_idx_t idx);
+
+
+    /*
+     * subtract a liberty from each of the strings adjacent to the tile at idx,
+     * potentially erasing any strings of the opposite color which went to zero
+     * liberties
+     */
+    void subtract_liberties(board_idx_t idx, Color color);
 
 
     /*
