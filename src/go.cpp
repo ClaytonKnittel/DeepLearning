@@ -109,11 +109,11 @@ board_idx_t Go::to_idx(coord_t x, coord_t y) const {
 
 
 board_idx_t Go::idx_up(board_idx_t idx) const {
-    return idx + this->w;
+    return idx + (this->w + 2);
 }
 
 board_idx_t Go::idx_down(board_idx_t idx) const {
-    return idx - this->w;
+    return idx - (this->w + 2);
 }
 
 board_idx_t Go::idx_left(board_idx_t idx) const {
@@ -164,7 +164,7 @@ bool Go::is_marked(board_idx_t idx) const {
 
 
 int Go::string_size(board_idx_t idx) const {
-    const TileString & s = this->strings[idx];
+    const TileString & s = this->strings[tiles[idx].string_idx()];
     return s.size;
 }
 
@@ -350,8 +350,11 @@ void Go::recompute_string(uint32_t string_idx) {
 void Go::append_string(board_idx_t idx, uint32_t string_idx) {
     board_idx_t prev_tile, tile;
 
+    speak("appending %d to string %d\n", idx, string_idx);
+
     // add the tile at idx to the proper location in the string's list of tiles
-    tile = strings[string_idx].first_tile;
+    board_idx_t first_tile = strings[string_idx].first_tile;
+    tile = first_tile;
     if (idx < tile) {
         strings[string_idx].first_tile = idx;
 
@@ -361,16 +364,29 @@ void Go::append_string(board_idx_t idx, uint32_t string_idx) {
         do {
             prev_tile = tile;
             tile = tiles[tile].next_tile;
-        } while (idx < tile);
+        } while (idx > tile && tile != first_tile);
     }
 
-    // calculate the updated string's liberties
     tiles[prev_tile].next_tile = idx;
     tiles[tile].prev_tile = idx;
 
     tiles[idx].next_tile = tile;
     tiles[idx].prev_tile = prev_tile;
 
+#ifdef VERBOSE
+    tile = strings[string_idx].first_tile;
+    speak("  string now: (");
+    do {
+        printf("%d", (int) tile);
+        tile = tiles[tile].next_tile;
+        if (strings[string_idx].first_tile != tile) {
+            printf(", ");
+        }
+    } while (strings[string_idx].first_tile != tile);
+    printf(")\n");
+#endif
+
+    // calculate the updated string's liberties
     TileString & s = strings[string_idx];
     // help the compiler out a bit :)
 #define n tile
@@ -849,7 +865,7 @@ void Go::_print(std::ostream & o,
 
 
 
-Go::Go(coord_t w, coord_t h) : w(w), h(h) {
+Go::Go(coord_t w, coord_t h) : w(w), h(h), turn(0) {
     // includes the borders
     this->n_tiles = (this->w + 2) * (this->h + 2);
     this->max_n_strings = this->calc_max_n_strings();
@@ -863,9 +879,9 @@ Go::Go(coord_t w, coord_t h) : w(w), h(h) {
 }
 
 
-Go::Go(const Go & g) : w(g.w), h(g.h), g_data_size(g.g_data_size),
-        n_tiles(g.n_tiles), max_n_strings(g.max_n_strings),
-        free_strings(g.free_strings) {
+Go::Go(const Go & g) : w(g.w), h(g.h), turn(g.turn),
+        g_data_size(g.g_data_size), n_tiles(g.n_tiles),
+        max_n_strings(g.max_n_strings), free_strings(g.free_strings) {
     this->g_data = malloc(g_data_size + Go::g_data_alignment);
     __builtin_memcpy(this->g_data, g.g_data, g_data_size);
     this->__assign_memory();
@@ -897,6 +913,7 @@ void Go::play(GameMove & m) {
     assert(!move_is_suicide(idx, gm.color));
 
     this->_do_play(idx, gm.color);
+    this->turn++;
 }
 
 void Go::undo(GameMove & m) {
@@ -925,10 +942,14 @@ void Go::print_info(std::ostream & o) const {
                 strcpy(buf, p);
 
                 size_t p_len = strlen(p);
-                uint32_t cnt = (is_liberty(to_idx(c, r)) ? 0 :
-                        num_liberties(to_idx(c, r)));
-                snprintf(buf + p_len, sizeof(buf) - p_len,
-                        "%2u", cnt);
+                if (!is_liberty(to_idx(c, r))) {
+                    uint32_t cnt = num_liberties(to_idx(c, r));
+                    snprintf(buf + p_len, sizeof(buf) - p_len,
+                            "%2u", cnt);
+                }
+                else {
+                    snprintf(buf + p_len, sizeof(buf) - p_len, "  ");
+                }
                 return buf;
             }, 3);
 }

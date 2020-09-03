@@ -29,7 +29,6 @@ public:
 
     virtual ~GoMove() = default;
 
-    go_turn_t turn;
     Color color;
     coord_t x, y;
 
@@ -50,6 +49,8 @@ public:
 private:
 
     coord_t w, h;
+
+    uint16_t turn;
 
     size_t g_data_size;
     uint32_t n_tiles;
@@ -260,6 +261,10 @@ public:
 
     coord_t height() const {
         return h;
+    }
+
+    uint16_t get_turn() const {
+        return turn;
     }
 
 

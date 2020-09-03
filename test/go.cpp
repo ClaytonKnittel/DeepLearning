@@ -36,8 +36,7 @@ int main(int argc, char * argv[]) {
         }
 
         GoMove m;
-        m.turn = 0;
-        m.color = Color::black;
+        m.color = (g.get_turn() & 1) ? Color::white : Color::black;
         m.x = c_let - 'A' - (c_let > 'I');
         m.y = r - 1;
 
