@@ -3,6 +3,8 @@
 #include <iostream>
 #include <string>
 
+#include <fun/print_colors.h>
+
 #include <go.h>
 
 int main(int argc, char * argv[]) {
@@ -15,7 +17,9 @@ int main(int argc, char * argv[]) {
 
         if (print) {
             std::cout << g << std::endl;
-            g.print_info(std::cout);
+            g.print_str_idx(std::cout);
+            std::cout << std::endl;
+            g.print_libs(std::cout);
             std::cout << std::endl;
         }
         print = true;
@@ -46,7 +50,12 @@ int main(int argc, char * argv[]) {
             continue;
         }
 
-        g.play(m);
+        try {
+            g.play(m);
+        } catch (const std::runtime_error & e) {
+            std::cerr << P_RED << e.what() << P_DEFAULT << std::endl;
+            break;
+        }
     }
 
     return 0;

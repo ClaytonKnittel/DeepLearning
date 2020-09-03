@@ -1,11 +1,12 @@
 
-#include <cassert>
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <stdexcept>
 
 #include <go.h>
 
+#include <fun/print_colors.h>
 #include <util/util.h>
 
 
@@ -14,6 +15,18 @@
 #else
 #define speak(...)
 #endif
+
+
+static constexpr const size_t runtime_err_buf_size = 1024;
+static char runtime_err_buf[runtime_err_buf_size];
+
+#define VA_ARGS(...) , ##__VA_ARGS__
+#define GO_ASSERT(expr, msg, ...) \
+    if (__builtin_expect(!(expr), 0)) { \
+        snprintf(runtime_err_buf, runtime_err_buf_size, msg \
+                VA_ARGS(__VA_ARGS__)); \
+        throw std::runtime_error(runtime_err_buf); \
+    }
 
 
 
@@ -125,6 +138,16 @@ board_idx_t Go::idx_right(board_idx_t idx) const {
 }
 
 
+std::string Go::idx_str(board_idx_t idx) const {
+    int x, y;
+    std::ostringstream os;
+    y = (idx / (this->w + 2)) - 1;
+    x = (idx % (this->w + 2)) - 1;
+    os << "(" << x << ", " << y << ")";
+    return os.str();
+}
+
+
 
 
 bool Go::color_matches(board_idx_t idx, Color color) const {
@@ -178,7 +201,7 @@ int Go::count_adj_liberties(board_idx_t idx) const {
     uint32_t n;
     int tot = 0;
 
-    speak("counting adjacent liberties at %d\n", idx);
+    speak("counting adjacent liberties at %s\n", idx_str(idx).c_str());
 
     n = idx_up(idx);
     tot += tiles[n].color() == Color::empty;
@@ -232,9 +255,10 @@ void Go::init_strings() {
 
 uint32_t Go::alloc_string() {
     uint32_t ret = this->free_strings;
-    assert(ret != -1);
-    assert(this->strings[this->free_strings].color == TileString::unused);
-    this->free_strings = this->strings[this->free_strings].next_free;
+    GO_ASSERT(ret != -1, "no more free strings");
+    GO_ASSERT(strings[ret].color == TileString::unused,
+            "allocated string %d was not marked unused", ret);
+    free_strings = strings[free_strings].next_free;
 
     speak("allocated string %d\n", ret);
 
@@ -347,10 +371,10 @@ void Go::recompute_string(uint32_t string_idx) {
 }
 
 
-void Go::append_string(board_idx_t idx, uint32_t string_idx) {
+void Go::append_string(board_idx_t idx, Color color, uint32_t string_idx) {
     board_idx_t prev_tile, tile;
 
-    speak("appending %d to string %d\n", idx, string_idx);
+    speak("appending %s to string %d\n", idx_str(idx).c_str(), string_idx);
 
     // add the tile at idx to the proper location in the string's list of tiles
     board_idx_t first_tile = strings[string_idx].first_tile;
@@ -377,7 +401,7 @@ void Go::append_string(board_idx_t idx, uint32_t string_idx) {
     tile = strings[string_idx].first_tile;
     speak("  string now: (");
     do {
-        printf("%d", (int) tile);
+        printf("%s", idx_str(tile).c_str());
         tile = tiles[tile].next_tile;
         if (strings[string_idx].first_tile != tile) {
             printf(", ");
@@ -487,6 +511,7 @@ void Go::append_string(board_idx_t idx, uint32_t string_idx) {
     }
 #undef n
 
+    tiles[idx].set_both(color, string_idx);
     s.size++;
 }
 
@@ -566,6 +591,9 @@ void Go::merge_strings_around(board_idx_t idx, Color color,
     board_idx_t n;
     uint32_t o_str_idx;
 
+    speak("merging strings around %s into %d\n", idx_str(idx).c_str(),
+            string_idx);
+
     n = idx_up(idx);
     if (tiles[n].color() == color &&
             (o_str_idx = tiles[n].string_idx()) != string_idx) {
@@ -637,8 +665,8 @@ Color Go::tile_at(coord_t x, coord_t y) const {
 
 
 const char * Go::tile_repr_at(coord_t x, coord_t y) const {
-    const static char black_str[] = "\033[0;94mO\033[0;39m";
-    const static char white_str[] = "\033[0;91mO\033[0;39m";
+    const static char black_str[] = P_LBLUE "O" P_DEFAULT;
+    const static char white_str[] = P_LRED "O" P_DEFAULT;
     const static char empty_str[] = " ";
 
     const char * ret;
@@ -656,8 +684,8 @@ const char * Go::tile_repr_at(coord_t x, coord_t y) const {
             ret = white_str;
             break;
         default:
-            fprintf(stderr, "No such tile %d\n", tile);
-            assert(0);
+            GO_ASSERT(0, "No such tile %d", tile);
+            __builtin_unreachable();
     }
     return ret;
 }
@@ -668,7 +696,7 @@ bool Go::move_is_suicide(board_idx_t idx, Color color) const {
     board_idx_t n;
     Color c;
 
-    speak("checking if %d suicidal\n", idx);
+    speak("checking if %s suicidal\n", idx_str(idx).c_str());
 
     n = idx_up(idx);
     c = tiles[idx].color();
@@ -715,7 +743,7 @@ bool Go::move_is_suicide(board_idx_t idx, Color color) const {
 
 
 void Go::place_lone_tile(board_idx_t idx, Color color) {
-    speak("placing lone tile at %d\n", idx);
+    speak("placing lone tile at %s\n", idx_str(idx).c_str());
 
     // need to allocate a new string for this tile
     uint32_t new_str = alloc_string();
@@ -743,7 +771,7 @@ void Go::_do_play(board_idx_t idx, Color color) {
     uint32_t first_string_idx = -1;
     uint8_t n_string_joins = 0;
 
-    speak("_do_play at %d\n", idx);
+    speak("_do_play at %s\n", idx_str(idx).c_str());
 
     n = idx_up(idx);
     if (tiles[n].color() == color) {
@@ -778,10 +806,7 @@ void Go::_do_play(board_idx_t idx, Color color) {
         place_lone_tile(idx, color);
     }
     else if (n_string_joins == 1) {
-        Tile & t = tiles[idx];
-        // join with the one adjacent string
-        t.set_color(color);
-        append_string(idx, first_string_idx);
+        append_string(idx, color, first_string_idx);
     }
     else {
         // join all strings we are connected to together
@@ -910,7 +935,8 @@ void Go::play(GameMove & m) {
     board_idx_t idx = to_idx(gm.x, gm.y);
 
     speak("Playing move at %s\n", gm.to_string().c_str());
-    assert(!move_is_suicide(idx, gm.color));
+    GO_ASSERT(!move_is_suicide(idx, gm.color), "move %s is suicidal",
+            gm.to_string().c_str());
 
     this->_do_play(idx, gm.color);
     this->turn++;
@@ -934,7 +960,7 @@ void Go::print(std::ostream & o) const {
             }, 1);
 }
 
-void Go::print_info(std::ostream & o) const {
+void Go::print_libs(std::ostream & o) const {
     this->_print(o,
             [&](int r, int c) -> const char * {
                 static char buf[32];
@@ -952,6 +978,52 @@ void Go::print_info(std::ostream & o) const {
                 }
                 return buf;
             }, 3);
+}
+
+void Go::print_str_idx(std::ostream & o) const {
+    this->_print(o,
+            [&](int r, int c) -> const char * {
+                static char buf[32];
+                const char * p = this->tile_repr_at(c, r);
+                strcpy(buf, p);
+
+                size_t p_len = strlen(p);
+                if (!is_liberty(to_idx(c, r))) {
+                    uint32_t cnt = tiles[to_idx(c, r)].string_idx();
+                    snprintf(buf + p_len, sizeof(buf) - p_len,
+                            "%2u", cnt);
+                }
+                else {
+                    snprintf(buf + p_len, sizeof(buf) - p_len, "  ");
+                }
+                return buf;
+            }, 3);
+}
+
+
+
+void Go::consistency_check() const {
+
+    // check to make sure border is all gray
+    board_idx_t idx = 0;
+    // top row
+    while (idx < this->w + 2) {
+        tiles[idx].set_color(gray);
+        idx++;
+    }
+    // two columns
+    while (idx < this->n_tiles - this->w) {
+        tiles[idx].set_color(gray);
+        idx += this->w + 1;
+        tiles[idx].set_color(gray);
+        idx++;
+    }
+    // bottom row
+    while (idx < this->n_tiles) {
+        tiles[idx].set_color(gray);
+        idx++;
+    }
+    
 }
 
 

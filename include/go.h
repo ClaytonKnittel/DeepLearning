@@ -82,6 +82,11 @@ private:
     board_idx_t idx_left(board_idx_t idx) const;
     board_idx_t idx_right(board_idx_t idx) const;
 
+    /*
+     * return a string representation of the tile at idx
+     */
+    std::string idx_str(board_idx_t idx) const;
+
 
     /*
      * returns true if the color at idx can be treated as "color" (either
@@ -180,7 +185,7 @@ private:
     /*
      * appends the tile at idx to the given string
      */
-    void append_string(board_idx_t idx, uint32_t string_idx);
+    void append_string(board_idx_t idx, Color color, uint32_t string_idx);
 
     /*
      * joins the two given strings into s1
@@ -283,7 +288,16 @@ public:
 
     virtual void print(std::ostream &) const;
 
-    void print_info(std::ostream &) const;
+    void print_libs(std::ostream &) const;
+
+    void print_str_idx(std::ostream &) const;
+
+
+    /*
+     * performs a consistency check on the Go state, throwing an exception
+     * upon failure
+     */
+    void consistency_check() const;
 
 };
 
