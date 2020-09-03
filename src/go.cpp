@@ -643,7 +643,7 @@ void Go::clear() {
         idx++;
     }
     // two columns
-    while (idx < this->n_tiles - this->w) {
+    while (idx < this->n_tiles - (this->w + 2)) {
         tiles[idx].set_color(gray);
         idx += this->w + 1;
         tiles[idx].set_color(gray);
@@ -841,9 +841,15 @@ void Go::_print(std::ostream & o,
     const static char BOTTOM_RIGHT[] = "\u2518";
 
 
-    const static char COL_INDICATORS[] = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
 
-
+    for (int r = this->h + 1; r >= 0; r--) {
+        for (int c = 0; c < this->w + 2; c++) {
+            Color col = tiles[r * (this->w + 2) + c].color();
+            o << ((col == gray) ? "g" : (col == white) ? "w" :
+                (col == black) ? "b" : "_");
+        }
+        o << std::endl;
+    }
 
     uint32_t row_idc_width = util::log10(this->h);
 
@@ -910,7 +916,7 @@ Go::Go(const Go & g) : w(g.w), h(g.h), turn(g.turn),
         g_data_size(g.g_data_size), n_tiles(g.n_tiles),
         max_n_strings(g.max_n_strings), free_strings(g.free_strings) {
     this->g_data = malloc(g_data_size + Go::g_data_alignment);
-    __builtin_memcpy(this->g_data, g.g_data, g_data_size);
+    __builtin_memcpy(this->g_data, g.g_data, g_data_size + Go::g_data_alignment);
     this->__assign_memory();
 }
 
@@ -1095,8 +1101,39 @@ void Go::consistency_check() const {
                     "tile at %s is not in the list for string %d",
                     idx_str(tile).c_str(), str_idx);
 
+            board_idx_t n;
+            n = idx_up(tile);
+            if (is_liberty(n)) {
+                std::cerr << idx_str(n) << " is up liberty" << std::endl;
+                libs.insert(n);
+            }
+            n = idx_left(tile);
+            if (is_liberty(n)) {
+                std::cerr << idx_str(n) << " is left liberty" << std::endl;
+                libs.insert(n);
+            }
+            n = idx_right(tile);
+            if (is_liberty(n)) {
+                std::cerr << idx_str(n) << " is right liberty" << std::endl;
+                libs.insert(n);
+            }
+            n = idx_down(tile);
+            if (is_liberty(n)) {
+                std::cerr << idx_str(n) << " is down liberty" << std::endl;
+                libs.insert(n);
+            }
+
             tile = tiles[tile].next_tile;
         } while (tile != strings[str_idx].first_tile);
+
+        std::cerr << "Libs for string " << str_idx << ": ";
+        for (auto it = libs.cbegin(); it != libs.cend(); it++) {
+            std::cerr << idx_str(*it) << ", ";
+        }
+        std::cerr << std::endl;
+
+        GO_ASSERT(s.liberties == libs.size(), "string with %zu liberties "
+                "is marked as having %u liberties", libs.size(), s.liberties);
     }
 }
 

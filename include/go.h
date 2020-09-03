@@ -46,6 +46,8 @@ public:
 
     static constexpr const uint64_t g_data_alignment = 128;
 
+    static constexpr const char COL_INDICATORS[] = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
+
 private:
 
     coord_t w, h;
