@@ -3,6 +3,8 @@
 #include <sstream>
 #include <iomanip>
 #include <stdexcept>
+#include <map>
+#include <unordered_set>
 
 #include <go.h>
 
@@ -1008,22 +1010,94 @@ void Go::consistency_check() const {
     board_idx_t idx = 0;
     // top row
     while (idx < this->w + 2) {
-        tiles[idx].set_color(gray);
+        GO_ASSERT(tiles[idx].color() == Color::gray, "border is not gray");
         idx++;
     }
     // two columns
     while (idx < this->n_tiles - this->w) {
-        tiles[idx].set_color(gray);
+        GO_ASSERT(tiles[idx].color() == Color::gray, "border is not gray");
         idx += this->w + 1;
-        tiles[idx].set_color(gray);
+        GO_ASSERT(tiles[idx].color() == Color::gray, "border is not gray");
         idx++;
     }
     // bottom row
     while (idx < this->n_tiles) {
-        tiles[idx].set_color(gray);
+        GO_ASSERT(tiles[idx].color() == Color::gray, "border is not gray");
         idx++;
     }
-    
+
+
+    // create map from string index to all children
+    std::multimap<uint32_t, board_idx_t> strs;
+    for (int r = 0; r < this->h; r++) {
+        for (int c = 0; c < this->w; c++) {
+            board_idx_t idx = to_idx(c, r);
+            if (is_stone(idx)) {
+                strs.insert({ tiles[idx].string_idx(), idx });
+            }
+        }
+    }
+
+    // check to make sure all adjacent segments are in the same strings
+    for (int r = 0; r < this->h; r++) {
+        for (int c = 0; c < this->w; c++) {
+            board_idx_t idx = to_idx(c, r);
+            Color col = tiles[idx].color();
+            uint32_t str_idx = tiles[idx].string_idx();
+
+            board_idx_t n;
+            n = idx_up(idx);
+            GO_ASSERT(!is_stone(n) || tiles[n].color() != col ||
+                    tiles[n].string_idx() == str_idx,
+                    "stone at %s is in a different string than stone at %s",
+                    idx_str(n).c_str(), idx_str(idx).c_str());
+            n = idx_left(idx);
+            GO_ASSERT(!is_stone(n) || tiles[n].color() != col ||
+                    tiles[n].string_idx() == str_idx,
+                    "stone at %s is in a different string than stone at %s",
+                    idx_str(n).c_str(), idx_str(idx).c_str());
+            n = idx_right(idx);
+            GO_ASSERT(!is_stone(n) || tiles[n].color() != col ||
+                    tiles[n].string_idx() == str_idx,
+                    "stone at %s is in a different string than stone at %s",
+                    idx_str(n).c_str(), idx_str(idx).c_str());
+            n = idx_down(idx);
+            GO_ASSERT(!is_stone(n) || tiles[n].color() != col ||
+                    tiles[n].string_idx() == str_idx,
+                    "stone at %s is in a different string than stone at %s",
+                    idx_str(n).c_str(), idx_str(idx).c_str());
+        }
+    }
+
+    // check liberty count, size, and completeness of each string
+    for (auto it = strs.begin(); it != strs.end();) {
+        uint32_t str_idx = it->first;
+        const TileString & s = strings[str_idx];
+
+        auto next_it = strs.upper_bound(it->first);
+        std::unordered_set<board_idx_t> str_tiles;
+        while (it != next_it) {
+            str_tiles.insert(it->second);
+            GO_ASSERT(tiles[it->second].string_idx() == str_idx,
+                    "tile at %s contained in list for string %d, but is "
+                    "marked as in string %d", idx_str(it->second).c_str(),
+                    str_idx, tiles[it->second].string_idx());
+            it++;
+        }
+
+        GO_ASSERT(s.size == str_tiles.size(), "string of size %zu is marked "
+                "as size %u", str_tiles.size(), s.size);
+
+        std::unordered_set<board_idx_t> libs;
+        board_idx_t tile = strings[str_idx].first_tile;
+        do {
+            GO_ASSERT(str_tiles.find(tile) != str_tiles.end(),
+                    "tile at %s is not in the list for string %d",
+                    idx_str(tile).c_str(), str_idx);
+
+            tile = tiles[tile].next_tile;
+        } while (tile != strings[str_idx].first_tile);
+    }
 }
 
 

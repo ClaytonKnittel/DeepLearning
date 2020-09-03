@@ -52,7 +52,13 @@ int main(int argc, char * argv[]) {
 
         try {
             g.play(m);
+            g.consistency_check();
         } catch (const std::runtime_error & e) {
+            std::cout << g << std::endl;
+            g.print_str_idx(std::cout);
+            std::cout << std::endl;
+            g.print_libs(std::cout);
+            std::cout << std::endl;
             std::cerr << P_RED << e.what() << P_DEFAULT << std::endl;
             break;
         }
