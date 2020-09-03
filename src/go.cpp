@@ -1,6 +1,7 @@
 
 #include <cassert>
 #include <iostream>
+#include <sstream>
 #include <iomanip>
 
 #include <go.h>
@@ -8,6 +9,11 @@
 #include <util/util.h>
 
 
+#ifdef VERBOSE
+#define speak(...) printf(__VA_ARGS__)
+#else
+#define speak(...)
+#endif
 
 
 
@@ -86,6 +92,14 @@ struct __attribute__((aligned(sizeof(uint64_t)))) TileString {
         };
     };
 };
+
+
+std::string GoMove::to_string() const {
+    std::ostringstream os;
+    os << (color == Color::black ? "black" : "white") << "(" << (int) this->x
+        << ", " << (int) this->y << ")";
+    return os.str();
+}
 
 
 
@@ -630,10 +644,15 @@ bool Go::move_is_suicide(board_idx_t idx, Color color) const {
     board_idx_t n;
     Color c;
 
+    speak("checking if %d suicidal\n", idx);
+
     n = idx_up(idx);
     c = tiles[idx].color();
     if (c == Color::empty || (c != Color::gray &&
                 ((num_liberties(n) == 1) ^ (c == color)))) {
+        speak("no, b/c above %s\n", c == Color::empty ? "is empty" :
+                (c == color ? "string has multiple liberties" :
+                 "string would be captured"));
         return false;
     }
 
@@ -641,6 +660,9 @@ bool Go::move_is_suicide(board_idx_t idx, Color color) const {
     c = tiles[idx].color();
     if (c == Color::empty || (c != Color::gray &&
                 ((num_liberties(n) == 1) ^ (c == color)))) {
+        speak("no, b/c left %s\n", c == Color::empty ? "is empty" :
+                (c == color ? "string has multiple liberties" :
+                 "string would be captured"));
         return false;
     }
 
@@ -648,6 +670,9 @@ bool Go::move_is_suicide(board_idx_t idx, Color color) const {
     c = tiles[idx].color();
     if (c == Color::empty || (c != Color::gray &&
                 ((num_liberties(n) == 1) ^ (c == color)))) {
+        speak("no, b/c right %s\n", c == Color::empty ? "is empty" :
+                (c == color ? "string has multiple liberties" :
+                 "string would be captured"));
         return false;
     }
 
@@ -655,6 +680,9 @@ bool Go::move_is_suicide(board_idx_t idx, Color color) const {
     c = tiles[idx].color();
     if (c == Color::empty || (c != Color::gray &&
                 ((num_liberties(n) == 1) ^ (c == color)))) {
+        speak("no, b/c below %s\n", c == Color::empty ? "is empty" :
+                (c == color ? "string has multiple liberties" :
+                 "string would be captured"));
         return false;
     }
 
@@ -853,6 +881,7 @@ void Go::play(GameMove & m) {
     GoMove & gm = dynamic_cast<GoMove &>(m);
     board_idx_t idx = to_idx(gm.x, gm.y);
 
+    speak("Playing move at %s\n", gm.to_string().c_str());
     assert(!move_is_suicide(idx, gm.color));
 
     this->_do_play(idx, gm.color);

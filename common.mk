@@ -12,11 +12,18 @@ IFLAGS=-I$(BASE_DIR)/include -I$(CPPFLOW_DIR)/include -I$(UTIL_DIR)/include
 #-I/library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/site-packages/tensorflow/include
 
 DEBUG=1
+VERBOSE=1
 
 ifeq ($(DEBUG), 0)
-CFLAGS=-std=c++17 -O3 -Wall -Wno-unused-function -MMD -MP
+_TMP_CFLAGS=-std=c++17 -O3 -Wall -Wno-unused-function -MMD -MP
 else
-CFLAGS=-std=c++17 -O0 -Wall -Wno-unused-function -MMD -MP -g3 -DDEBUG
+_TMP_CFLAGS=-std=c++17 -O0 -Wall -Wno-unused-function -MMD -MP -g3 -DDEBUG
+endif
+
+ifeq ($(VERBOSE), 1)
+CFLAGS=$(_TMP_CFLAGS) -DVERBOSE
+else
+CFLAGS=$(_TMP_CFLAGS)
 endif
 
 LDFLAGS=-flto -L$(LIB_DIR) -L$(BASE_DIR)/utils/lib -ltensorflow -lcppflow -lutil

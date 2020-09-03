@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include <util/util.h>
 
 #include <game.h>
@@ -30,6 +32,8 @@ public:
     go_turn_t turn;
     Color color;
     coord_t x, y;
+
+    std::string to_string() const;
 };
 
 
@@ -250,11 +254,11 @@ public:
 
     virtual ~Go();
 
-    uint32_t width() const {
+    coord_t width() const {
         return w;
     }
 
-    uint32_t height() const {
+    coord_t height() const {
         return h;
     }
 
