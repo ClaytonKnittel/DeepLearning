@@ -200,11 +200,15 @@ private:
 
     /*
      * removes the stone at idx from the string's list of liberties
+     *
+     * idx must already be a liberty of string_idx
      */
     void remove_liberty(uint32_t string_idx, board_idx_t idx);
 
     /*
      * adds the empty tile at idx to the string's list of liberties
+     *
+     * idx must not already be a liberty of string_idx
      */
     void add_liberty(uint32_t string_idx, board_idx_t idx);
 
@@ -215,6 +219,12 @@ private:
      * liberties
      */
     void subtract_liberties(board_idx_t idx, Color color);
+
+    /*
+     * add a liberty to each of the strings adjacent to the tile at idx whose
+     * color does not match "color"
+     */
+    void add_liberties(board_idx_t idx, Color color);
 
 
     /*

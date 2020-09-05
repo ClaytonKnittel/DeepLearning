@@ -5,11 +5,13 @@
 #include <stdexcept>
 #include <map>
 #include <unordered_set>
+#include <set>
 
 #include <go.h>
 
 #include <fun/print_colors.h>
 #include <util/util.h>
+#include <algorithms/sort.h>
 
 
 #ifdef VERBOSE
@@ -77,6 +79,9 @@ struct __attribute__((aligned(sizeof(uint64_t)))) TileString {
     static constexpr const int unused = Color::num_states;
     // only record the exact locations of up to 8 liberties
     static constexpr const int tracked_liberties = 8;
+
+    // index that a string cannot have, to be used as a NULL string
+    static constexpr const uint32_t no_string = 0xffffffffu;
 
     // list of liberties for this string, to be kept sorted by value.
     // if liberties > tracked_liberties, then the contents of this list
@@ -317,6 +322,9 @@ uint32_t Go::liberty_list_merge(board_idx_t * dst, uint32_t dst_len,
 
 void Go::recompute_string(uint32_t string_idx) {
     TileString & s = strings[string_idx];
+    // store the list of liberties in here, since we will have to store
+    // them in the liberty list if they will fit
+    board_idx_t new_liberties[TileString::tracked_liberties];
 
     uint32_t n_liberties = 0;
 
@@ -332,6 +340,9 @@ void Go::recompute_string(uint32_t string_idx) {
     do {
         n = idx_up(tile);
         if (is_liberty(n) && !is_marked(n)) {
+            if (n_liberties < TileString::tracked_liberties) {
+                new_liberties[n_liberties] = n;
+            }
             n_liberties++;
             mark_free_tile(n);
             tiles[n].next_tile = last_lib;
@@ -340,6 +351,9 @@ void Go::recompute_string(uint32_t string_idx) {
 
         n = idx_left(tile);
         if (is_liberty(n) && !is_marked(n)) {
+            if (n_liberties < TileString::tracked_liberties) {
+                new_liberties[n_liberties] = n;
+            }
             n_liberties++;
             mark_free_tile(n);
             tiles[n].next_tile = last_lib;
@@ -348,6 +362,9 @@ void Go::recompute_string(uint32_t string_idx) {
 
         n = idx_right(tile);
         if (is_liberty(n) && !is_marked(n)) {
+            if (n_liberties < TileString::tracked_liberties) {
+                new_liberties[n_liberties] = n;
+            }
             n_liberties++;
             mark_free_tile(n);
             tiles[n].next_tile = last_lib;
@@ -356,6 +373,9 @@ void Go::recompute_string(uint32_t string_idx) {
 
         n = idx_down(tile);
         if (is_liberty(n) && !is_marked(n)) {
+            if (n_liberties < TileString::tracked_liberties) {
+                new_liberties[n_liberties] = n;
+            }
             n_liberties++;
             mark_free_tile(n);
             tiles[n].next_tile = last_lib;
@@ -370,21 +390,88 @@ void Go::recompute_string(uint32_t string_idx) {
         unmark_free_tile(last_lib);
         last_lib = tiles[last_lib].next_tile;
     }
+
+    // store liberty count in string
+    s.liberties = n_liberties;
+
+    if (n_liberties <= TileString::tracked_liberties) {
+        // store the sorted list of liberties in the liberty list for the
+        // string
+        util::const_sort<board_idx_t, TileString::tracked_liberties>(new_liberties);
+        __builtin_memcpy(s.liberty_list, new_liberties,
+                TileString::tracked_liberties * sizeof(board_idx_t));
+    }
 }
 
 
 void Go::erase_string(uint32_t string_idx) {
+    board_idx_t tile;
+    TileString & s = strings[string_idx];
+    Color color = static_cast<Color>(s.color);
 
+    // iterate through the tiles, removing them from the board and adding them
+    // as liberties to each of the adjacent strings
+    tile = s.first_tile;
+    do {
+        tiles[tile].set_color(Color::empty);
+        add_liberties(tile, color);
+    } while (tile != s.first_tile);
 }
 
 
 void Go::remove_liberty(uint32_t string_idx, board_idx_t idx) {
+    TileString & s = strings[string_idx];
 
+    if (s.liberties == TileString::tracked_liberties + 1) {
+        // the liberty list has undefined contents, so we have to recompute
+        // the liberty list
+        recompute_string(string_idx);
+    }
+    else if (s.liberties <= TileString::tracked_liberties) {
+        uint8_t lib_idx = 0;
+
+        // remove idx from the list of liberties, adjusting the positions of
+        // the rest of the elements in the list to accomodate the change
+        while (s.liberty_list[lib_idx] != idx) {
+            lib_idx++;
+        }
+        s.liberties--;
+        while (lib_idx < s.liberties) {
+            s.liberty_list[lib_idx] = s.liberty_list[lib_idx + 1];
+            lib_idx++;
+        }
+    }
+    else {
+        // we are not tracking the liberties at this point, so we can simply
+        // take one off the total count
+        s.liberties--;
+    }
 }
 
 
 void Go::add_liberty(uint32_t string_idx, board_idx_t idx) {
+    TileString & s = strings[string_idx];
 
+    if (s.liberties < TileString::tracked_liberties) {
+        // we have to add idx to the list of liberties
+        uint8_t lib_idx = 0;
+        while (lib_idx < s.liberties && s.liberty_list[lib_idx] < idx) {
+            lib_idx++;
+        }
+        board_idx_t tmp = idx;
+        s.liberties++;
+        while (lib_idx < s.liberties) {
+            board_idx_t n = s.liberty_list[lib_idx];
+            s.liberty_list[lib_idx] = tmp;
+            tmp = n;
+            lib_idx++;
+        }
+    }
+    else {
+        // we are not tracking liberties, so we can simply add one to the total
+        // count
+        s.liberties++;
+    }
 }
 
 
@@ -395,9 +482,10 @@ void Go::subtract_liberties(board_idx_t idx, Color color) {
     // to be set if the string for the tile in the corresponding direction
     // had a liberty taken away (so we don't double count any strings which
     // are adjacent in multiple directions)
-    uint32_t up_str = 0xffffffffu;
-    uint32_t left_str = 0xffffffffu;
-    uint32_t right_str = 0xffffffffu;
+    uint32_t up_str = TileString::no_string;
+    uint32_t left_str = TileString::no_string;
+    uint32_t right_str = TileString::no_string;
+    uint32_t down_str;
 
     n = idx_up(idx);
     if (is_stone(n)) {
@@ -407,7 +495,86 @@ void Go::subtract_liberties(board_idx_t idx, Color color) {
             erase_string(up_str);
         }
     }
-    // TODO rest
+
+    n = idx_left(idx);
+    if (is_stone(n)) {
+        left_str = tiles[n].string_idx();
+        if (left_str != up_str) {
+            remove_liberty(left_str, n);
+            if (tiles[n].color() == o && strings[left_str].liberties == 0) {
+                erase_string(left_str);
+            }
+        }
+    }
+
+    n = idx_right(idx);
+    if (is_stone(n)) {
+        right_str = tiles[n].string_idx();
+        if (right_str != up_str && right_str != left_str) {
+            remove_liberty(right_str, n);
+            if (tiles[n].color() == o && strings[right_str].liberties == 0) {
+                erase_string(right_str);
+            }
+        }
+    }
+
+    n = idx_down(idx);
+    if (is_stone(n)) {
+        down_str = tiles[n].string_idx();
+        if (down_str != up_str && down_str != left_str &&
+                down_str != right_str) {
+            remove_liberty(down_str, n);
+            if (tiles[n].color() == o && strings[down_str].liberties == 0) {
+                erase_string(down_str);
+            }
+        }
+    }
+
+}
+
+
+void Go::add_liberties(board_idx_t idx, Color color) {
+    board_idx_t n;
+    Color o = other_color(color);
+
+    // to be set if the string for the tile in the corresponding direction
+    // had a liberty taken away (so we don't double count any strings which
+    // are adjacent in multiple directions)
+    uint32_t up_str = TileString::no_string;
+    uint32_t left_str = TileString::no_string;
+    uint32_t right_str = TileString::no_string;
+    uint32_t down_str;
+
+    n = idx_up(idx);
+    if (tiles[n].color() == o) {
+        up_str = tiles[n].string_idx();
+        add_liberty(up_str, n);
+    }
+
+    n = idx_left(idx);
+    if (tiles[n].color() == o) {
+        left_str = tiles[n].string_idx();
+        if (left_str != up_str) {
+            add_liberty(left_str, n);
+        }
+    }
+
+    n = idx_right(idx);
+    if (tiles[n].color() == o) {
+        right_str = tiles[n].string_idx();
+        if (right_str != up_str && right_str != left_str) {
+            add_liberty(right_str, n);
+        }
+    }
+
+    n = idx_down(idx);
+    if (tiles[n].color() == o) {
+        down_str = tiles[n].string_idx();
+        if (down_str != up_str && down_str != left_str &&
+                down_str != right_str) {
+            add_liberty(down_str, n);
+        }
+    }
 }
 
 
@@ -1134,7 +1301,8 @@ void Go::consistency_check() const {
         GO_ASSERT(s.size == str_tiles.size(), "string of size %zu is marked "
                 "as size %u", str_tiles.size(), s.size);
 
-        std::unordered_set<board_idx_t> libs;
+        // manually find all liberties
+        std::set<board_idx_t> libs;
         board_idx_t tile = strings[str_idx].first_tile;
         do {
             GO_ASSERT(str_tiles.find(tile) != str_tiles.end(),
@@ -1174,6 +1342,16 @@ void Go::consistency_check() const {
 
         GO_ASSERT(s.liberties == libs.size(), "string with %zu liberties "
                 "is marked as having %u liberties", libs.size(), s.liberties);
+
+        // check if s's liberties are in sorted order
+        if (s.liberties <= TileString::tracked_liberties) {
+            auto it = libs.cbegin();
+            for (size_t i = 0; i < s.liberties; i++) {
+                fprintf(stderr, "compare %u to %u\n", *it, s.liberty_list[i]);
+                GO_ASSERT(*it == s.liberty_list[i], "string %d contains "
+                        "incorrect/unsorted list of liberties", str_idx);
+            }
+        }
     }
 }
 
