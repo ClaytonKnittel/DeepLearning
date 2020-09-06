@@ -129,11 +129,11 @@ board_idx_t Go::to_idx(coord_t x, coord_t y) const {
 
 
 board_idx_t Go::idx_up(board_idx_t idx) const {
-    return idx + (this->w + 2);
+    return idx - (this->w + 2);
 }
 
 board_idx_t Go::idx_down(board_idx_t idx) const {
-    return idx - (this->w + 2);
+    return idx + (this->w + 2);
 }
 
 board_idx_t Go::idx_left(board_idx_t idx) const {
@@ -201,27 +201,6 @@ int Go::string_size(board_idx_t idx) const {
 int Go::num_liberties(board_idx_t idx) const {
     const TileString & s = this->strings[tiles[idx].string_idx()];
     return s.liberties;
-}
-
-
-int Go::count_adj_liberties(board_idx_t idx) const {
-    uint32_t n;
-    int tot = 0;
-
-    speak("counting adjacent liberties at %s\n", idx_str(idx).c_str());
-
-    n = idx_up(idx);
-    tot += tiles[n].color() == Color::empty;
-    n = idx_left(idx);
-    tot += tiles[n].color() == Color::empty;
-    n = idx_right(idx);
-    tot += tiles[n].color() == Color::empty;
-    n = idx_down(idx);
-    tot += tiles[n].color() == Color::empty;
-
-    speak("  found %d\n", tot);
-
-    return tot;
 }
 
 
@@ -963,7 +942,26 @@ void Go::place_lone_tile(board_idx_t idx, Color color) {
     s.color = color;
     s.size = 1;
     s.first_tile = idx;
-    s.liberties = count_adj_liberties(idx);
+
+    uint32_t n, n_liberties = 0;
+
+    n = idx_up(idx);
+    s.liberty_list[n_liberties] = n;
+    n_liberties += tiles[n].color() == Color::empty;
+
+    n = idx_left(idx);
+    s.liberty_list[n_liberties] = n;
+    n_liberties += tiles[n].color() == Color::empty;
+
+    n = idx_right(idx);
+    s.liberty_list[n_liberties] = n;
+    n_liberties += tiles[n].color() == Color::empty;
+
+    n = idx_down(idx);
+    s.liberty_list[n_liberties] = n;
+    n_liberties += tiles[n].color() == Color::empty;
+
+    s.liberties = n_liberties;
 }
 
 
@@ -1048,8 +1046,11 @@ void Go::_print(std::ostream & o,
     const static char BOTTOM_RIGHT[] = "\u2518";
 
 
+    GO_ASSERT(piece_width <= max_piece_print_width, "piece width %d is higher "
+            "than max piece width %d", piece_width, max_piece_print_width);
 
-    for (int r = this->h + 1; r >= 0; r--) {
+
+    for (int r = 0; r < this->h + 2; r++) {
         for (int c = 0; c < this->w + 2; c++) {
             Color col = tiles[r * (this->w + 2) + c].color();
             o << ((col == gray) ? "g" : (col == white) ? "w" :
@@ -1073,8 +1074,8 @@ void Go::_print(std::ostream & o,
     o << TOP_RIGHT << '\n';
 
 
-    for (int r = this->h - 1; r >= 0; r--) {
-        o << std::setw(row_idc_width) << r + 1 << " " << VBAR;
+    for (int r = 0; r < this->h; r++) {
+        o << std::setw(row_idc_width) << this->h - r << " " << VBAR;
         for (int c = 0; c < this->w; c++) {
             if (piece_width < 3) {
                 o << " ";
@@ -1087,7 +1088,7 @@ void Go::_print(std::ostream & o,
         }
         o << '\n';
 
-        if (r != 0) {
+        if (r != this->h - 1) {
             o << std::setw(row_idc_width + 1) << "" << MIDDLE_LEFT;
             for (int c = 1; c < this->w; c++) {
                 o << MIDDLE_CONNECTOR;
@@ -1165,6 +1166,12 @@ void Go::undo(GameMove & m) {
 
 void Go::for_each_legal_move(std::function<void(Game &, GameMove &)> f) {
 
+}
+
+
+uint32_t Go::print_width() const {
+    uint32_t idx_w = util::log10(this->h);
+    return (1 + max_piece_print_width) * this->w + idx_w + 2;
 }
 
 
@@ -1350,6 +1357,7 @@ void Go::consistency_check() const {
                 fprintf(stderr, "compare %u to %u\n", *it, s.liberty_list[i]);
                 GO_ASSERT(*it == s.liberty_list[i], "string %d contains "
                         "incorrect/unsorted list of liberties", str_idx);
+                it++;
             }
         }
     }

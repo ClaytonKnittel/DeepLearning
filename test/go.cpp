@@ -1,11 +1,43 @@
 
 #include <algorithm>
 #include <iostream>
+#include <iomanip>
+#include <sstream>
 #include <string>
 
 #include <fun/print_colors.h>
 
 #include <go.h>
+
+
+void print_w(const std::string & s, uint32_t w) {
+    size_t spec_cnt = std::count_if(s.begin(), s.end(), []( char c ){
+            return (c & 0xc0) == 0x80;
+        });
+    size_t ansi_cnt = std::count_if(s.begin(), s.end(), []( char c ){
+            return c == '\033';
+        });
+    std::cout << std::left << std::setw(w + spec_cnt + ansi_cnt * (sizeof(P_DEFAULT) - 1)) << s;
+}
+
+void interleave_print(const Go & g) {
+    std::stringstream os1, os2;
+    g.print_str_idx(os1);
+    g.print_libs(os2);
+
+    uint32_t w = g.print_width() + 10;
+    
+    std::string buf1, buf2;
+    while (true) {
+        std::getline(os1, buf1);
+        std::getline(os2, buf2);
+        if (!os1 && !os2) {
+            break;
+        }
+        print_w(buf1, w);
+        std::cout << buf2 << std::endl;
+    }
+}
 
 int main(int argc, char * argv[]) {
 
@@ -16,11 +48,7 @@ int main(int argc, char * argv[]) {
     while (true) {
 
         if (print) {
-            std::cout << g << std::endl;
-            g.print_str_idx(std::cout);
-            std::cout << std::endl;
-            g.print_libs(std::cout);
-            std::cout << std::endl;
+            interleave_print(g);
         }
         print = true;
 
@@ -42,7 +70,7 @@ int main(int argc, char * argv[]) {
         GoMove m;
         m.color = (g.get_turn() & 1) ? Color::white : Color::black;
         m.x = c_let - 'A' - (c_let > 'I');
-        m.y = r - 1;
+        m.y = g.height() - r;
 
         if (c_let == 'I' || m.x >= g.width() || m.y >= g.height()) {
             fprintf(stderr, "Unknown tile\n");
@@ -54,11 +82,7 @@ int main(int argc, char * argv[]) {
             g.play(m);
             g.consistency_check();
         } catch (const std::runtime_error & e) {
-            std::cout << g << std::endl;
-            g.print_str_idx(std::cout);
-            std::cout << std::endl;
-            g.print_libs(std::cout);
-            std::cout << std::endl;
+            interleave_print(g);
             std::cerr << P_RED << e.what() << P_DEFAULT << std::endl;
             break;
         }

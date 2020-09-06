@@ -55,6 +55,9 @@ public:
 
     static constexpr const char COL_INDICATORS[] = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
 
+    // the width of a single tile when the board is printed as unicode text
+    static constexpr const uint32_t max_piece_print_width = 3;
+
 private:
 
     coord_t w, h;
@@ -145,14 +148,6 @@ private:
      * returns the number of liberties in the string at idx
      */
     int num_liberties(board_idx_t idx) const;
-
-    /*
-     * count the number of liberties around the tile at idx, without
-     * consideration of the group the stone at idx may be tied to (i.e. this
-     * returns a number 0-4, counting only the number of empty tiles
-     * immediately around this tile)
-     */
-    int count_adj_liberties(board_idx_t idx) const;
 
 
     /*
@@ -330,6 +325,9 @@ public:
 
     virtual void for_each_legal_move(std::function<void(Game &, GameMove &)> f);
 
+
+    // gives the width of the Go board when printed as unicode text
+    uint32_t print_width() const;
 
     virtual void print(std::ostream &) const;
 
