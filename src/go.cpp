@@ -114,14 +114,6 @@ struct __attribute__((aligned(sizeof(uint64_t)))) TileString {
 };
 
 
-std::string GoMove::to_string() const {
-    std::ostringstream os;
-    os << (color == Color::black ? "black" : "white") << "(" << (int) this->x
-        << ", " << (int) this->y << ")";
-    return os.str();
-}
-
-
 
 board_idx_t Go::to_idx(coord_t x, coord_t y) const {
     return (y + 1) * (this->w + 2) + (x + 1);
@@ -271,7 +263,7 @@ uint32_t Go::liberty_list_merge(board_idx_t * dst, uint32_t dst_len,
 
     while (l1_idx < l1_len && l2_idx < l2_len) {
 
-        uint8_t smaller = l1[l1_idx] < l2[l2_idx] ? l1[l1_idx] : l2[l2_idx];
+        board_idx_t smaller = l1[l1_idx] < l2[l2_idx] ? l1[l1_idx] : l2[l2_idx];
 
         if (dst_idx < dst_len) {
             dst[dst_idx] = smaller;
@@ -915,8 +907,10 @@ Color Go::tile_at(coord_t x, coord_t y) const {
 
 
 const char * Go::tile_repr_at(coord_t x, coord_t y) const {
-    const static char black_str[] = P_LBLUE "O" P_DEFAULT;
-    const static char white_str[] = P_LRED "O" P_DEFAULT;
+    //const static char black_str[] = P_LBLUE "O" P_DEFAULT;
+    //const static char white_str[] = P_LRED "O" P_DEFAULT;
+    const static char black_str[] = P_LCYAN "\u25CF" P_DEFAULT;
+    const static char white_str[] = P_LMAGENTA "\u25CF" P_DEFAULT;
     const static char empty_str[] = " ";
 
     const char * ret;
@@ -1091,22 +1085,24 @@ void Go::_do_undo() {
 }
 
 
+bool Go::is_star_tile(coord_t x, coord_t y) const {
+    if (this->w == 19 && this->h == 19) {
+        return (x == 3 || x == 9 || x == 15) &&
+               (y == 3 || y == 9 || y == 15);
+    }
+    else if (this->w == 13 && this->h == 13) {
+        return ((x == 3 || x == 9) && (y == 3 || y == 9)) ||
+            (x == 6 && y == 6);
+    }
+    else if (this->w == 9 && this->h == 9) {
+        return ((x == 2 || x == 6) && (y == 2 || y == 6)) ||
+            (x == 4 && y == 4);
+    }
+    return false;
+}
+
 
 void Go::_print(std::ostream & o) const {
-    const static char TOP_LEFT[] = "\u250C\u2500\u2500\u2500";
-    const static char TOP_CONNECTOR[] = "\u252C\u2500\u2500\u2500";
-    const static char TOP_RIGHT[] = "\u2510";
-
-    const static char MIDDLE_LEFT[] = "\u251C\u2500\u2500\u2500";
-    const static char MIDDLE_CONNECTOR[] = "\u253C\u2500\u2500\u2500";
-    const static char MIDDLE_RIGHT[] = "\u2524";
-
-    const static char VBAR[] = "\u2502";
-
-    const static char BOTTOM_LEFT[] = "\u2514\u2500\u2500\u2500";
-    const static char BOTTOM_CONNECTOR[] = "\u2534\u2500\u2500\u2500";
-    const static char BOTTOM_RIGHT[] = "\u2518";
-
 
     uint32_t row_idc_width = util::log10(this->h);
 
@@ -1124,7 +1120,10 @@ void Go::_print(std::ostream & o) const {
                 o << tile_repr_at(c, r);
             }
             else {
-                if (r == 0) {
+                if (is_star_tile(c, r)) {
+                    o << "\u25EF";
+                }
+                else if (r == 0) {
                     if (c == 0) {
                         o << "\u250C";
                     }
@@ -1305,9 +1304,10 @@ void Go::play(GameMove & m) {
     GoMove & gm = dynamic_cast<GoMove &>(m);
     board_idx_t idx = to_idx(gm.x, gm.y);
 
-    speak("Playing move at %s\n", gm.to_string().c_str());
+    speak("Playing move at %s\n", idx_str(idx).c_str());
+    GO_ASSERT(!is_stone(idx), "%s is already occupied", idx_str(idx).c_str());
     GO_ASSERT(!move_is_suicide(idx, gm.color), "move %s is suicidal",
-            gm.to_string().c_str());
+            idx_str(idx).c_str());
 
     this->_do_play(idx, gm.color);
     this->turn++;

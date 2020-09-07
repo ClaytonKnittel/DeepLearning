@@ -38,8 +38,6 @@ public:
 
     Color color;
     coord_t x, y;
-
-    std::string to_string() const;
 };
 
 
@@ -284,6 +282,13 @@ private:
      * configuration
      */
     void _do_undo();
+
+
+    /*
+     * returns true if the tile at (x, y) is a star tile (only applicable to
+     * the standard board sizes, 9x9, 13x13, and 19x19)
+     */
+    bool is_star_tile(coord_t x, coord_t y) const;
 
 
     void _print_dbg(std::ostream &,
