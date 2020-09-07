@@ -389,13 +389,18 @@ void Go::erase_string(uint32_t string_idx) {
     TileString & s = strings[string_idx];
     Color color = static_cast<Color>(s.color);
 
+    speak("erasing string %u\n", string_idx);
+
     // iterate through the tiles, removing them from the board and adding them
     // as liberties to each of the adjacent strings
     tile = s.first_tile;
     do {
         tiles[tile].set_color(Color::empty);
         add_liberties(tile, color);
+        tile = tiles[tile].next_tile;
     } while (tile != s.first_tile);
+
+    free_string(string_idx);
 }
 
 
@@ -434,6 +439,9 @@ void Go::remove_liberty(uint32_t string_idx, board_idx_t idx) {
 
 void Go::add_liberty(uint32_t string_idx, board_idx_t idx) {
     TileString & s = strings[string_idx];
+
+    speak("adding liberty %s to string %u\n", idx_str(idx).c_str(),
+            string_idx);
 
     if (s.liberties < TileString::tracked_liberties) {
         // we have to add idx to the list of liberties
@@ -535,14 +543,14 @@ void Go::add_liberties(board_idx_t idx, Color color) {
     n = idx_up(idx);
     if (tiles[n].color() == o) {
         up_str = tiles[n].string_idx();
-        add_liberty(up_str, n);
+        add_liberty(up_str, idx);
     }
 
     n = idx_left(idx);
     if (tiles[n].color() == o) {
         left_str = tiles[n].string_idx();
         if (left_str != up_str) {
-            add_liberty(left_str, n);
+            add_liberty(left_str, idx);
         }
     }
 
@@ -550,7 +558,7 @@ void Go::add_liberties(board_idx_t idx, Color color) {
     if (tiles[n].color() == o) {
         right_str = tiles[n].string_idx();
         if (right_str != up_str && right_str != left_str) {
-            add_liberty(right_str, n);
+            add_liberty(right_str, idx);
         }
     }
 
@@ -559,7 +567,7 @@ void Go::add_liberties(board_idx_t idx, Color color) {
         down_str = tiles[n].string_idx();
         if (down_str != up_str && down_str != left_str &&
                 down_str != right_str) {
-            add_liberty(down_str, n);
+            add_liberty(down_str, idx);
         }
     }
 }
@@ -941,7 +949,7 @@ bool Go::move_is_suicide(board_idx_t idx, Color color) const {
     speak("checking if %s suicidal\n", idx_str(idx).c_str());
 
     n = idx_up(idx);
-    c = tiles[idx].color();
+    c = tiles[n].color();
     if (c == Color::empty || (c != Color::gray &&
                 ((num_liberties(n) == 1) ^ (c == color)))) {
         speak("no, b/c above %s\n", c == Color::empty ? "is empty" :
@@ -951,7 +959,7 @@ bool Go::move_is_suicide(board_idx_t idx, Color color) const {
     }
 
     n = idx_left(idx);
-    c = tiles[idx].color();
+    c = tiles[n].color();
     if (c == Color::empty || (c != Color::gray &&
                 ((num_liberties(n) == 1) ^ (c == color)))) {
         speak("no, b/c left %s\n", c == Color::empty ? "is empty" :
@@ -961,7 +969,7 @@ bool Go::move_is_suicide(board_idx_t idx, Color color) const {
     }
 
     n = idx_right(idx);
-    c = tiles[idx].color();
+    c = tiles[n].color();
     if (c == Color::empty || (c != Color::gray &&
                 ((num_liberties(n) == 1) ^ (c == color)))) {
         speak("no, b/c right %s\n", c == Color::empty ? "is empty" :
@@ -971,7 +979,7 @@ bool Go::move_is_suicide(board_idx_t idx, Color color) const {
     }
 
     n = idx_down(idx);
-    c = tiles[idx].color();
+    c = tiles[n].color();
     if (c == Color::empty || (c != Color::gray &&
                 ((num_liberties(n) == 1) ^ (c == color)))) {
         speak("no, b/c below %s\n", c == Color::empty ? "is empty" :
@@ -1392,6 +1400,8 @@ void Go::consistency_check() const {
 
         GO_ASSERT(s.size == str_tiles.size(), "string of size %zu is marked "
                 "as size %u", str_tiles.size(), s.size);
+
+        GO_ASSERT(s.liberties > 0, "string %u has 0 liberties", str_idx);
 
         // manually find all liberties while checking that the tile list is
         // complete and correctly ordered
