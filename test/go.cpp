@@ -42,23 +42,29 @@ void interleave_print(const Go & g) {
     }
 }
 
+void regular_print(const Go & g) {
+    std::cout << g << std::endl;
+}
+
 int main(int argc, char * argv[]) {
 
-    Go g(5, 5);
+    Go g(19, 19);
+
+    void(*print_fn)(const Go &) = regular_print;
 
     bool print = true;
 
     while (true) {
 
         if (print) {
-            interleave_print(g);
+            print_fn(g);
         }
         print = true;
 
         std::string buf;
         std::cin >> buf;
 
-        if (buf == "quit" || buf == "q" || buf == "exit") {
+        if (!std::cin || buf == "quit" || buf == "q" || buf == "exit") {
             break;
         }
 
@@ -67,8 +73,7 @@ int main(int argc, char * argv[]) {
         if (sscanf(buf.c_str(), "%c%d", &c_let, &r) != 2) {
             fprintf(stderr, "Unable to parse\n");
             print = false;
-            break;
-            //continue;
+            continue;
         }
 
         GoMove m;
@@ -86,7 +91,7 @@ int main(int argc, char * argv[]) {
             g.play(m);
             g.consistency_check();
         } catch (const std::runtime_error & e) {
-            interleave_print(g);
+            print_fn(g);
             std::cerr << P_RED << e.what() << P_DEFAULT << std::endl;
             break;
         }

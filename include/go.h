@@ -286,9 +286,11 @@ private:
     void _do_undo();
 
 
-    void _print(std::ostream &,
+    void _print_dbg(std::ostream &,
         const std::function<const char *(int, int)> & print_fn,
         int piece_width) const;
+
+    void _print(std::ostream &) const;
 
 public:
 

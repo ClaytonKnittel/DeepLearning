@@ -1091,7 +1091,97 @@ void Go::_do_undo() {
 }
 
 
-void Go::_print(std::ostream & o,
+
+void Go::_print(std::ostream & o) const {
+    const static char TOP_LEFT[] = "\u250C\u2500\u2500\u2500";
+    const static char TOP_CONNECTOR[] = "\u252C\u2500\u2500\u2500";
+    const static char TOP_RIGHT[] = "\u2510";
+
+    const static char MIDDLE_LEFT[] = "\u251C\u2500\u2500\u2500";
+    const static char MIDDLE_CONNECTOR[] = "\u253C\u2500\u2500\u2500";
+    const static char MIDDLE_RIGHT[] = "\u2524";
+
+    const static char VBAR[] = "\u2502";
+
+    const static char BOTTOM_LEFT[] = "\u2514\u2500\u2500\u2500";
+    const static char BOTTOM_CONNECTOR[] = "\u2534\u2500\u2500\u2500";
+    const static char BOTTOM_RIGHT[] = "\u2518";
+
+
+    uint32_t row_idc_width = util::log10(this->h);
+
+    o << std::setw(row_idc_width + 1) << "";
+    for (int c = 0; c < this->w; c++) {
+        o << COL_INDICATORS[c] << " ";
+    }
+    o << '\n';
+
+
+    for (int r = 0; r < this->h; r++) {
+        o << std::setw(row_idc_width) << this->h - r << " ";
+        for (int c = 0; c < this->w; c++) {
+            if (is_stone(to_idx(c, r))) {
+                o << tile_repr_at(c, r);
+            }
+            else {
+                if (r == 0) {
+                    if (c == 0) {
+                        o << "\u250C";
+                    }
+                    else if (c == this->w - 1) {
+                        o << "\u2510";
+                    }
+                    else {
+                        o << "\u252C";
+                    }
+                }
+                else if (r == this->h - 1) {
+                    if (c == 0) {
+                        o << "\u2514";
+                    }
+                    else if (c == this->w - 1) {
+                        o << "\u2518";
+                    }
+                    else {
+                        o << "\u2534";
+                    }
+                }
+                else {
+                    if (c == 0) {
+                        o << "\u251C";
+                    }
+                    else if (c == this->w - 1) {
+                        o << "\u2524";
+                    }
+                    else {
+                        o << "\u253C";
+                    }
+                }
+            }
+            if (c != this->w - 1) {
+                o << "\u2500";
+            }
+            else {
+                o << "\n";
+            }
+        }
+
+        /*
+        if (r != this->h - 1) {
+            o << std::setw(row_idc_width + 1) << "";
+            for (int c = 0; c < this->w; c++) {
+                o << VBAR;
+                if (c != this->w - 1) {
+                    o << "   ";
+                }
+            }
+            o << "\n";
+        }*/
+    }
+}
+
+
+void Go::_print_dbg(std::ostream & o,
         const std::function<const char *(int, int)> & print_fn,
         int piece_width) const {
 
@@ -1114,6 +1204,7 @@ void Go::_print(std::ostream & o,
             "than max piece width %d", piece_width, max_piece_print_width);
 
 
+    /*
     for (int r = 0; r < this->h + 2; r++) {
         for (int c = 0; c < this->w + 2; c++) {
             Color col = tiles[r * (this->w + 2) + c].color();
@@ -1121,7 +1212,7 @@ void Go::_print(std::ostream & o,
                 (col == black) ? "b" : "_");
         }
         o << std::endl;
-    }
+    }*/
 
     uint32_t row_idc_width = util::log10(this->h);
 
@@ -1240,14 +1331,11 @@ uint32_t Go::print_width() const {
 
 
 void Go::print(std::ostream & o) const {
-    this->_print(o,
-            [&](int r, int c) -> const char* {
-                return this->tile_repr_at(c, r);
-            }, 1);
+    this->_print(o);
 }
 
 void Go::print_libs(std::ostream & o) const {
-    this->_print(o,
+    this->_print_dbg(o,
             [&](int r, int c) -> const char * {
                 static char buf[32];
                 const char * p = this->tile_repr_at(c, r);
@@ -1267,7 +1355,7 @@ void Go::print_libs(std::ostream & o) const {
 }
 
 void Go::print_str_idx(std::ostream & o) const {
-    this->_print(o,
+    this->_print_dbg(o,
             [&](int r, int c) -> const char * {
                 static char buf[32];
                 const char * p = this->tile_repr_at(c, r);
@@ -1287,7 +1375,7 @@ void Go::print_str_idx(std::ostream & o) const {
 }
 
 void Go::print_tile_idx(std::ostream & o) const {
-    this->_print(o,
+    this->_print_dbg(o,
             [&](int r, int c) -> const char * {
                 static char buf[4];
 
@@ -1422,22 +1510,18 @@ void Go::consistency_check() const {
             board_idx_t n;
             n = idx_up(tile);
             if (is_liberty(n)) {
-                std::cerr << idx_str(n) << " is up liberty" << std::endl;
                 libs.insert(n);
             }
             n = idx_left(tile);
             if (is_liberty(n)) {
-                std::cerr << idx_str(n) << " is left liberty" << std::endl;
                 libs.insert(n);
             }
             n = idx_right(tile);
             if (is_liberty(n)) {
-                std::cerr << idx_str(n) << " is right liberty" << std::endl;
                 libs.insert(n);
             }
             n = idx_down(tile);
             if (is_liberty(n)) {
-                std::cerr << idx_str(n) << " is down liberty" << std::endl;
                 libs.insert(n);
             }
 
@@ -1448,12 +1532,6 @@ void Go::consistency_check() const {
         GO_ASSERT(tile_it == str_tiles.end(), "tile %s was not found in the "
                 "tile list", idx_str(*tile_it).c_str());
 
-        std::cerr << "Libs for string " << str_idx << ": ";
-        for (auto it = libs.cbegin(); it != libs.cend(); it++) {
-            std::cerr << idx_str(*it) << ", ";
-        }
-        std::cerr << std::endl;
-
         GO_ASSERT(s.liberties == libs.size(), "string with %zu liberties "
                 "is marked as having %u liberties", libs.size(), s.liberties);
 
@@ -1461,8 +1539,6 @@ void Go::consistency_check() const {
         if (s.liberties <= TileString::tracked_liberties) {
             auto it = libs.cbegin();
             for (size_t i = 0; i < s.liberties; i++) {
-                fprintf(stderr, "compare actual (%u) to list (%u)\n", *it,
-                        s.liberty_list[i]);
                 GO_ASSERT(*it == s.liberty_list[i], "string %d contains "
                         "incorrect/unsorted list of liberties", str_idx);
                 it++;
