@@ -335,6 +335,8 @@ public:
 
     void print_str_idx(std::ostream &) const;
 
+    void print_tile_idx(std::ostream &) const;
+
 
     /*
      * performs a consistency check on the Go state, throwing an exception

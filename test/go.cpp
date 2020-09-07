@@ -21,21 +21,24 @@ void print_w(const std::string & s, uint32_t w) {
 }
 
 void interleave_print(const Go & g) {
-    std::stringstream os1, os2;
+    std::stringstream os1, os2, os3;
     g.print_str_idx(os1);
     g.print_libs(os2);
+    g.print_tile_idx(os3);
 
     uint32_t w = g.print_width() + 10;
     
-    std::string buf1, buf2;
+    std::string buf1, buf2, buf3;
     while (true) {
         std::getline(os1, buf1);
         std::getline(os2, buf2);
-        if (!os1 && !os2) {
+        std::getline(os3, buf3);
+        if (!os1 && !os2 && !os3) {
             break;
         }
         print_w(buf1, w);
-        std::cout << buf2 << std::endl;
+        print_w(buf2, w);
+        std::cout << buf3 << std::endl;
     }
 }
 
@@ -64,7 +67,8 @@ int main(int argc, char * argv[]) {
         if (sscanf(buf.c_str(), "%c%d", &c_let, &r) != 2) {
             fprintf(stderr, "Unable to parse\n");
             print = false;
-            continue;
+            break;
+            //continue;
         }
 
         GoMove m;

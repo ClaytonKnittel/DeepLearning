@@ -150,7 +150,7 @@ std::string Go::idx_str(board_idx_t idx) const {
     std::ostringstream os;
     y = (idx / (this->w + 2)) - 1;
     x = (idx % (this->w + 2)) - 1;
-    os << "(" << x << ", " << y << ")";
+    os << Go::COL_INDICATORS[x] << this->h - y;
     return os.str();
 }
 
@@ -234,7 +234,8 @@ void Go::init_strings() {
     for (int i = 0; i < this->max_n_strings; i++) {
         TileString & s = this->strings[i];
         s.color = TileString::unused;
-        s.next_free = (i == this->max_n_strings - 1) ? -1 : i + 1;
+        s.next_free = (i == this->max_n_strings - 1) ? TileString::no_string :
+            i + 1;
     }
 }
 
@@ -401,6 +402,9 @@ void Go::erase_string(uint32_t string_idx) {
 void Go::remove_liberty(uint32_t string_idx, board_idx_t idx) {
     TileString & s = strings[string_idx];
 
+    speak("removing liberty %s from string %u\n", idx_str(idx).c_str(),
+            string_idx);
+
     if (s.liberties == TileString::tracked_liberties + 1) {
         // the liberty list has undefined contents, so we have to recompute
         // the liberty list
@@ -466,10 +470,12 @@ void Go::subtract_liberties(board_idx_t idx, Color color) {
     uint32_t right_str = TileString::no_string;
     uint32_t down_str;
 
+    speak("subtracting liberties around %s\n", idx_str(idx).c_str());
+
     n = idx_up(idx);
     if (is_stone(n)) {
         up_str = tiles[n].string_idx();
-        remove_liberty(up_str, n);
+        remove_liberty(up_str, idx);
         if (tiles[n].color() == o && strings[up_str].liberties == 0) {
             erase_string(up_str);
         }
@@ -479,7 +485,7 @@ void Go::subtract_liberties(board_idx_t idx, Color color) {
     if (is_stone(n)) {
         left_str = tiles[n].string_idx();
         if (left_str != up_str) {
-            remove_liberty(left_str, n);
+            remove_liberty(left_str, idx);
             if (tiles[n].color() == o && strings[left_str].liberties == 0) {
                 erase_string(left_str);
             }
@@ -490,7 +496,7 @@ void Go::subtract_liberties(board_idx_t idx, Color color) {
     if (is_stone(n)) {
         right_str = tiles[n].string_idx();
         if (right_str != up_str && right_str != left_str) {
-            remove_liberty(right_str, n);
+            remove_liberty(right_str, idx);
             if (tiles[n].color() == o && strings[right_str].liberties == 0) {
                 erase_string(right_str);
             }
@@ -502,7 +508,7 @@ void Go::subtract_liberties(board_idx_t idx, Color color) {
         down_str = tiles[n].string_idx();
         if (down_str != up_str && down_str != left_str &&
                 down_str != right_str) {
-            remove_liberty(down_str, n);
+            remove_liberty(down_str, idx);
             if (tiles[n].color() == o && strings[down_str].liberties == 0) {
                 erase_string(down_str);
             }
@@ -523,6 +529,8 @@ void Go::add_liberties(board_idx_t idx, Color color) {
     uint32_t left_str = TileString::no_string;
     uint32_t right_str = TileString::no_string;
     uint32_t down_str;
+
+    speak("adding liberties around %s\n", idx_str(idx).c_str());
 
     n = idx_up(idx);
     if (tiles[n].color() == o) {
@@ -706,50 +714,95 @@ void Go::join_strings(uint32_t s1, uint32_t s2) {
     TileString & str1 = strings[s1];
     TileString & str2 = strings[s2];
 
-    // merge all tiles in str1 and str2
-    board_idx_t t1 = str1.first_tile, t2 = str2.first_tile;
-    // the first tile of the resultant string is the minimum of the two
-    // first tiles of each string
-    board_idx_t new_head = t1 < t2 ? t1 : t2;
+    speak("joining strings %u and %u\n", s1, s2);
 
-    // calculate the last tile in the resultant list, so we don't have to worry
-    // about linking the tail back to the head afterward
-    board_idx_t last_tile;
-    {
-        board_idx_t t1_last = tiles[t1].prev_tile;
-        board_idx_t t2_last = tiles[t2].prev_tile;
-        last_tile = t1_last < t2_last ? t1_last : t2_last;
+    // true when no elements have been taken from the corresponding tile
+    // list
+    bool zero1 = true, zero2 = true;
+
+    // merge all tiles in str1 and str2
+    board_idx_t t1 = str1.first_tile;
+    board_idx_t t2 = str2.first_tile;
+
+    board_idx_t new_head, last_tile;
+
+    // first, find the new head
+    if (t1 < t2) {
+        new_head = t1;
+        last_tile = t1;
+        t1 = tiles[t1].next_tile;
+        zero1 = false;
     }
-    while (t1 != str1.first_tile && t2 != str2.first_tile) {
+    else {
+        new_head = t2;
+        last_tile = t2;
+        tiles[t2].set_string_idx(s1);
+        t2 = tiles[t2].next_tile;
+        zero2 = false;
+    }
+
+    // then iterate through the rest of both lists, appending them to the new
+    // list
+    while ((zero1 || t1 != str1.first_tile) &&
+            (zero2 || t2 != str2.first_tile)) {
+
         board_idx_t next_tile;
         if (t1 < t2) {
             next_tile = t1;
             t1 = tiles[t1].next_tile;
+            zero1 = false;
         }
         else {
             next_tile = t2;
+            tiles[t2].set_string_idx(s1);
             t2 = tiles[t2].next_tile;
+            zero2 = false;
         }
-        
+
+        speak("1 adding %s to the list\n", idx_str(next_tile).c_str());
+
         tiles[last_tile].next_tile = next_tile;
         tiles[next_tile].prev_tile = last_tile;
         last_tile = next_tile;
     }
     // finish up whatever's left in whichever list wasn't emptied
-    while (t1 != str1.first_tile) {
+    while (zero1 || t1 != str1.first_tile) {
         tiles[last_tile].next_tile = t1;
         tiles[t1].prev_tile = last_tile;
+        last_tile = t1;
         t1 = tiles[t1].next_tile;
+
+        speak("2 adding %s to the list\n", idx_str(t1).c_str());
+        zero1 = false;
     }
-    while (t2 != str2.first_tile) {
+    while (zero2 || t2 != str2.first_tile) {
         tiles[last_tile].next_tile = t2;
         tiles[t2].prev_tile = last_tile;
+        tiles[t2].set_string_idx(s1);
+        last_tile = t2;
         t2 = tiles[t2].next_tile;
+
+        speak("3 adding %s to the list\n", idx_str(t2).c_str());
+        zero2 = false;
     }
 
     // lastly link the string to the head of the new list
     str1.first_tile = new_head;
+    tiles[last_tile].next_tile = new_head;
+    tiles[new_head].prev_tile = last_tile;
 
+    str1.size += str2.size;
+
+    last_tile = str1.first_tile;
+    printf("  (");
+    do {
+        printf("%s", idx_str(last_tile).c_str());
+        last_tile = tiles[last_tile].next_tile;
+        if (last_tile != str1.first_tile) {
+            printf(", ");
+        }
+    } while (last_tile != str1.first_tile);
+    printf(")\n");
 
     if (str1.liberties <= TileString::tracked_liberties &&
             str2.liberties <= TileString::tracked_liberties) {
@@ -769,6 +822,8 @@ void Go::join_strings(uint32_t s1, uint32_t s2) {
     else {
         recompute_string(s1);
     }
+
+    free_string(s2);
 }
 
 
@@ -780,6 +835,7 @@ void Go::merge_strings_around(board_idx_t idx, Color color,
     speak("merging strings around %s into %d\n", idx_str(idx).c_str(),
             string_idx);
 
+    // merge all surrounding friendly strings into string_idx
     n = idx_up(idx);
     if (tiles[n].color() == color &&
             (o_str_idx = tiles[n].string_idx()) != string_idx) {
@@ -804,8 +860,8 @@ void Go::merge_strings_around(board_idx_t idx, Color color,
         join_strings(string_idx, o_str_idx);
     }
 
-    Tile & t = tiles[idx];
-    t.set_both(color, string_idx);
+    // now add the tile at idx to string_idx
+    append_string(idx, color, string_idx);
 }
 
 
@@ -1222,6 +1278,16 @@ void Go::print_str_idx(std::ostream & o) const {
             }, 3);
 }
 
+void Go::print_tile_idx(std::ostream & o) const {
+    this->_print(o,
+            [&](int r, int c) -> const char * {
+                static char buf[4];
+
+                snprintf(buf, sizeof(buf), "%3u", to_idx(c, r));
+                return buf;
+            }, 3);
+}
+
 
 
 void Go::consistency_check() const {
@@ -1257,6 +1323,25 @@ void Go::consistency_check() const {
             }
         }
     }
+
+    std::set<uint32_t> free_strs;
+    for (uint32_t str_idx = free_strings; str_idx != TileString::no_string;
+            str_idx = strings[str_idx].next_free) {
+        free_strs.insert(str_idx);
+    }
+    uint32_t ref_cnt = 0;
+    // check for early frees/memory leaks in the strings
+    for (auto it = strs.begin(); it != strs.end();
+            it = strs.upper_bound(it->first)) {
+
+        GO_ASSERT(free_strs.find(it->first) == free_strs.end(), "free string "
+                "%u is still referenced by %s", it->first,
+                idx_str(it->second).c_str());
+
+        ref_cnt++;
+    }
+    GO_ASSERT(free_strs.size() + ref_cnt == max_n_strings, "string memory "
+            "leak");
 
     // check to make sure all adjacent segments are in the same strings
     for (int r = 0; r < this->h; r++) {
@@ -1295,7 +1380,7 @@ void Go::consistency_check() const {
         const TileString & s = strings[str_idx];
 
         auto next_it = strs.upper_bound(it->first);
-        std::unordered_set<board_idx_t> str_tiles;
+        std::set<board_idx_t> str_tiles;
         while (it != next_it) {
             str_tiles.insert(it->second);
             GO_ASSERT(tiles[it->second].string_idx() == str_idx,
@@ -1308,13 +1393,21 @@ void Go::consistency_check() const {
         GO_ASSERT(s.size == str_tiles.size(), "string of size %zu is marked "
                 "as size %u", str_tiles.size(), s.size);
 
-        // manually find all liberties
+        // manually find all liberties while checking that the tile list is
+        // complete and correctly ordered
         std::set<board_idx_t> libs;
         board_idx_t tile = strings[str_idx].first_tile;
+        auto tile_it = str_tiles.begin();
+        board_idx_t prev_tile = *str_tiles.rbegin();
         do {
             GO_ASSERT(str_tiles.find(tile) != str_tiles.end(),
                     "tile at %s is not in the list for string %d",
                     idx_str(tile).c_str(), str_idx);
+            GO_ASSERT(tile == *tile_it, "tile %s was not found in the tile "
+                    "list", idx_str(tile).c_str());
+            GO_ASSERT(tiles[tile].prev_tile == prev_tile, "prev_tile of %s "
+                    "was not %s", idx_str(tile).c_str(),
+                    idx_str(prev_tile).c_str());
 
             board_idx_t n;
             n = idx_up(tile);
@@ -1338,8 +1431,12 @@ void Go::consistency_check() const {
                 libs.insert(n);
             }
 
+            prev_tile = tile;
+            tile_it++;
             tile = tiles[tile].next_tile;
         } while (tile != strings[str_idx].first_tile);
+        GO_ASSERT(tile_it == str_tiles.end(), "tile %s was not found in the "
+                "tile list", idx_str(*tile_it).c_str());
 
         std::cerr << "Libs for string " << str_idx << ": ";
         for (auto it = libs.cbegin(); it != libs.cend(); it++) {
@@ -1354,7 +1451,8 @@ void Go::consistency_check() const {
         if (s.liberties <= TileString::tracked_liberties) {
             auto it = libs.cbegin();
             for (size_t i = 0; i < s.liberties; i++) {
-                fprintf(stderr, "compare %u to %u\n", *it, s.liberty_list[i]);
+                fprintf(stderr, "compare actual (%u) to list (%u)\n", *it,
+                        s.liberty_list[i]);
                 GO_ASSERT(*it == s.liberty_list[i], "string %d contains "
                         "incorrect/unsorted list of liberties", str_idx);
                 it++;
