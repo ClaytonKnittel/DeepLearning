@@ -75,8 +75,6 @@ struct Tile {
 
 
 struct __attribute__((aligned(sizeof(uint64_t)))) TileString {
-    // when color is set to this, this TileString is "free"
-    static constexpr const int unused = Color::num_states;
     // only record the exact locations of up to 8 liberties
     static constexpr const int tracked_liberties = 8;
 
@@ -98,11 +96,26 @@ struct __attribute__((aligned(sizeof(uint64_t)))) TileString {
             // number of stones in the string
             int size;
 
-            // the number of empty tiles adjacent to this string
-            int liberties;
-
             // index of the first stone in this string
             board_idx_t first_tile;
+
+            union {
+                // when this TileString belongs to a string of stones
+                struct {
+                    // the number of empty tiles adjacent to this string (i.e.
+                    // color is black or white)
+                    int liberties;
+                };
+
+                // when this TileString belongs to a string of empty spaces
+                // (i.e. color is empty)
+                struct {
+                    // the number of black/white stones adjacent anywhere on
+                    // this string
+                    int n_black_borders;
+                    int n_white_borders;
+                };
+            };
 
         };
         // when this TileString is "free"
@@ -198,24 +211,11 @@ int Go::num_liberties(board_idx_t idx) const {
 
 
 /*
- * the board can be packed like so
- *
- * xo.oxo
- * oxox.x
- * x.xoxo
- * oxo.ox
- *
- * and so on, which can be tiled by the shape
- *
- * oxo
- * x.x
- * oxo
- * .
- *
- * which is 4/5 dense with stones
+ * since we have strings for empty spaces, the maximum number of possible
+ * strings would be one per tile
  */
 uint32_t Go::calc_max_n_strings() const {
-    return (this->w * this->h * 4 + 4) / 5;
+    return this->w * this->h;
 }
 
 
@@ -225,7 +225,6 @@ void Go::init_strings() {
 
     for (int i = 0; i < this->max_n_strings; i++) {
         TileString & s = this->strings[i];
-        s.color = TileString::unused;
         s.next_free = (i == this->max_n_strings - 1) ? TileString::no_string :
             i + 1;
     }
@@ -235,8 +234,6 @@ void Go::init_strings() {
 uint32_t Go::alloc_string() {
     uint32_t ret = this->free_strings;
     GO_ASSERT(ret != -1, "no more free strings");
-    GO_ASSERT(strings[ret].color == TileString::unused,
-            "allocated string %d was not marked unused", ret);
     free_strings = strings[free_strings].next_free;
 
     speak("allocated string %d\n", ret);
@@ -247,7 +244,6 @@ uint32_t Go::alloc_string() {
 
 void Go::free_string(uint32_t string_ident) {
     TileString & s = this->strings[string_ident];
-    s.color = TileString::unused;
     s.next_free = this->free_strings;
     this->free_strings = string_ident;
 
@@ -369,7 +365,8 @@ void Go::recompute_string(uint32_t string_idx) {
     if (n_liberties <= TileString::tracked_liberties) {
         // store the sorted list of liberties in the liberty list for the
         // string
-        util::const_sort<board_idx_t, TileString::tracked_liberties>(new_liberties);
+        util::const_sort<board_idx_t,
+            TileString::tracked_liberties>(new_liberties);
         __builtin_memcpy(s.liberty_list, new_liberties,
                 TileString::tracked_liberties * sizeof(board_idx_t));
     }
