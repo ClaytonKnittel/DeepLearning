@@ -322,7 +322,11 @@ public:
 
     Go(const Go & g);
 
-    Go(Go && g) = default;
+    Go(Go && g);
+
+    Go & operator=(const Go & g);
+
+    Go & operator=(Go && g);
 
     virtual ~Go();
 
@@ -345,9 +349,13 @@ public:
 
     virtual bool max_player() const;
 
+    virtual bool is_current() const;
+
     virtual void play(GameMove & m);
 
     virtual void undo();
+
+    virtual void redo();
 
     virtual void for_each_legal_move(std::function<void(Game &, GameMove &)> f);
 

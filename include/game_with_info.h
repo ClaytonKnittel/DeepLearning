@@ -3,6 +3,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <vector>
 #include <curses.h>
 
 #include <go.h>
@@ -12,7 +13,10 @@ class GameWithInfo : public Go {
 private:
 
     std::string p1_name, p2_name;
-    board_idx_t last_move;
+
+    size_t h_idx;
+    std::vector<board_idx_t> last_moves;
+    std::vector<Go> history;
 
     void print_to(const std::string & s) const {
         ::clear();
@@ -74,7 +78,11 @@ public:
     template<typename ...Args>
     GameWithInfo(Args... args) : Go(args...),
             p1_name(Go::default_p1_name),
-            p2_name(Go::default_p2_name), last_move(-1) {
+            p2_name(Go::default_p2_name),
+            h_idx(0) {
+
+        last_moves.push_back(-1);
+        history.push_back(*this);
 
         setlocale(LC_ALL, "");
         // initialize ncurses
@@ -107,15 +115,39 @@ public:
         p2_name = name;
     }
 
+    /*
+     * returns true if the game is current (i.e. there are no moves
+     * ahead of the current state recorded in history)
+     */
+    virtual bool is_current() const {
+        return h_idx + 1 == history.size();
+    }
+
     virtual void play(GameMove & m) {
         GoMove & gm = dynamic_cast<GoMove &>(m);
-        last_move = to_idx(gm.x, gm.y);
+        last_moves.push_back(to_idx(gm.x, gm.y));
         Go::play(m);
+        h_idx++;
+        history.push_back(*this);
+    }
+
+    virtual void undo() {
+        if (h_idx > 0) {
+            h_idx--;
+            Go::operator=(history[h_idx]);
+        }
+    }
+
+    virtual void redo() {
+        if (h_idx + 1 < history.size()) {
+            h_idx++;
+            Go::operator=(history[h_idx]);
+        }
     }
 
     virtual void print(std::ostream & o) const {
         std::ostringstream os;
-        this->print_named(os, p1_name, p2_name, last_move);
+        this->print_named(os, p1_name, p2_name, last_moves[h_idx]);
         print_to(os.str());
     }
 };

@@ -34,6 +34,12 @@ public:
     virtual bool max_player() const = 0;
 
     /*
+     * returns true if the game is in its most current state, i.e. a call to
+     * redo would fail
+     */
+    virtual bool is_current() const = 0;
+
+    /*
      * plays the given move, updating the game state accordingly
      */
     virtual void play(GameMove & m) = 0;
@@ -42,6 +48,11 @@ public:
      * undoes the last move
      */
     virtual void undo() = 0;
+
+    /*
+     * redoes the last undone move
+     */
+    virtual void redo() = 0;
 
     /*
      * iterates over legal moves in current game state, calling f with arguments

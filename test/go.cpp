@@ -111,13 +111,15 @@ int main(int argc, char * argv[]) {
             if (undoes) {
                 g.undo();
             }
+            else if (!g.is_current()) {
+                g.redo();
+            }
             else {
                 g.play(m);
             }
             g.consistency_check();
         } catch (const std::runtime_error & e) {
             print_fn(g);
-            //std::cerr << P_RED << e.what() << P_DEFAULT << std::endl;
             attron(COLOR_PAIR(5));
             printw("%s\n", e.what());
             attroff(COLOR_PAIR(5));

@@ -1329,13 +1329,77 @@ Go::Go(const Go & g) : w(g.w), h(g.h), turn(g.turn),
         max_n_strings(g.max_n_strings), free_strings(g.free_strings),
         black_captures(g.black_captures), white_captures(g.white_captures) {
     this->g_data = malloc(g_data_size + Go::g_data_alignment);
-    __builtin_memcpy(this->g_data, g.g_data, g_data_size + Go::g_data_alignment);
+    __builtin_memcpy(this->g_data, g.g_data,
+            g_data_size + Go::g_data_alignment);
     this->__assign_memory();
 }
 
 
+Go::Go(Go && g) : w(g.w), h(g.h), turn(g.turn),
+        g_data_size(g.g_data_size), n_tiles(g.n_tiles),
+        max_n_strings(g.max_n_strings), free_strings(g.free_strings),
+        black_captures(g.black_captures), white_captures(g.white_captures) {
+
+    g_data = g.g_data;
+    tiles = g.tiles;
+    strings = g.strings;
+    g.g_data = nullptr;
+    g.tiles = nullptr;
+    g.strings = nullptr;
+}
+
+
+Go & Go::operator=(const Go & g) {
+    w = g.w;
+    h = g.h;
+    turn = g.turn;
+    g_data_size = g.g_data_size;
+    n_tiles = g.n_tiles;
+    max_n_strings = g.max_n_strings;
+    free_strings = g.free_strings;
+    black_captures = g.black_captures;
+    white_captures = g.white_captures;
+
+    if (g_data) {
+        free(g_data);
+    }
+    this->g_data = malloc(g_data_size + Go::g_data_alignment);
+    __builtin_memcpy(this->g_data, g.g_data,
+            g_data_size + Go::g_data_alignment);
+    this->__assign_memory();
+
+    return *this;
+}
+
+Go & Go::operator=(Go && g) {
+    w = g.w;
+    h = g.h;
+    turn = g.turn;
+    g_data_size = g.g_data_size;
+    n_tiles = g.n_tiles;
+    max_n_strings = g.max_n_strings;
+    free_strings = g.free_strings;
+    black_captures = g.black_captures;
+    white_captures = g.white_captures;
+
+    if (g_data) {
+        free(g_data);
+    }
+    g_data = g.g_data;
+    tiles = g.tiles;
+    strings = g.strings;
+    g.g_data = nullptr;
+    g.tiles = nullptr;
+    g.strings = nullptr;
+
+    return *this;
+}
+
+
 Go::~Go() {
-    free(g_data);
+    if (g_data) {
+        free(g_data);
+    }
 }
 
 
@@ -1348,6 +1412,10 @@ int Go::get_score() const {
 }
 
 bool Go::max_player() const {
+    return true;
+}
+
+bool Go::is_current() const {
     return true;
 }
 
@@ -1371,6 +1439,10 @@ void Go::play(GameMove & m) {
 
 void Go::undo() {
     this->_do_undo();
+}
+
+void Go::redo() {
+    GO_ASSERT(false, "redo not implemented");
 }
 
 void Go::for_each_legal_move(std::function<void(Game &, GameMove &)> f) {
