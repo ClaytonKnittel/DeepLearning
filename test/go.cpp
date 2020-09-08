@@ -1,13 +1,18 @@
 
 #include <algorithm>
+#include <getopt.h>
 #include <iostream>
 #include <iomanip>
+#include <memory>
 #include <sstream>
 #include <string>
 
 #include <fun/print_colors.h>
 
+#include <file_move.h>
+#include <game_with_info.h>
 #include <go.h>
+#include <user_move.h>
 
 
 void print_w(const std::string & s, uint32_t w) {
@@ -48,11 +53,27 @@ void regular_print(const Go & g) {
 
 int main(int argc, char * argv[]) {
 
-    Go g(19, 19);
+    GameWithInfo g(19, 19);
 
     void(*print_fn)(const Go &) = regular_print;
 
     bool print = true;
+
+    std::shared_ptr<MoveGen> move_gen = nullptr;
+
+    int opt;
+    while ((opt = getopt(argc, argv, "f:")) != -1) {
+        switch(opt) {
+            case 'f':
+                move_gen = std::make_shared<FileMove>(optarg, g);
+                break;
+        }
+    }
+
+    if (move_gen == nullptr) {
+        move_gen = std::make_shared<UserMove>(g);
+    }
+
 
     while (true) {
 
@@ -60,32 +81,23 @@ int main(int argc, char * argv[]) {
             print_fn(g);
         }
         print = true;
-
-        std::string buf;
-        std::cin >> buf;
-
-        if (!std::cin || buf == "quit" || buf == "q" || buf == "exit") {
-            break;
-        }
-
-        int r;
-        char c_let;
-        if (sscanf(buf.c_str(), "%c%d", &c_let, &r) != 2) {
-            fprintf(stderr, "Unable to parse\n");
-            print = false;
-            continue;
-        }
+        bool again = false, game_over = false;
 
         GoMove m;
-        m.color = (g.get_turn() & 1) ? Color::white : Color::black;
-        m.x = c_let - 'A' - (c_let > 'I');
-        m.y = g.height() - r;
-
-        if (c_let == 'I' || m.x >= g.width() || m.y >= g.height()) {
-            fprintf(stderr, "Unknown tile\n");
-            print = false;
-            continue;
+        switch (move_gen->next_move(m)) {
+            case ok:
+                break;
+            case retry:
+                print = false;
+                again = true;
+                break;
+            case failed:
+                game_over = true;
+                break;
         }
+
+        if (again) continue;
+        if (game_over) break;
 
         try {
             g.play(m);

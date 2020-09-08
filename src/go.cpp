@@ -96,26 +96,11 @@ struct __attribute__((aligned(sizeof(uint64_t)))) TileString {
             // number of stones in the string
             int size;
 
+            // the number of empty tiles adjacent to this string
+            int liberties;
+
             // index of the first stone in this string
             board_idx_t first_tile;
-
-            union {
-                // when this TileString belongs to a string of stones
-                struct {
-                    // the number of empty tiles adjacent to this string (i.e.
-                    // color is black or white)
-                    int liberties;
-                };
-
-                // when this TileString belongs to a string of empty spaces
-                // (i.e. color is empty)
-                struct {
-                    // the number of black/white stones adjacent anywhere on
-                    // this string
-                    int n_black_borders;
-                    int n_white_borders;
-                };
-            };
 
         };
         // when this TileString is "free"
@@ -211,11 +196,24 @@ int Go::num_liberties(board_idx_t idx) const {
 
 
 /*
- * since we have strings for empty spaces, the maximum number of possible
- * strings would be one per tile
+ * the board can be packed like so
+ *
+ * xo.oxo
+ * oxox.x
+ * x.xoxo
+ * oxo.ox
+ *
+ * and so on, which can be tiled by the shape
+ *
+ * oxo
+ * x.x
+ * oxo
+ * .
+ *
+ * which is 4/5 dense with stones
  */
 uint32_t Go::calc_max_n_strings() const {
-    return this->w * this->h;
+    return (this->w * this->h * 4 + 4) / 5;
 }
 
 
@@ -365,8 +363,7 @@ void Go::recompute_string(uint32_t string_idx) {
     if (n_liberties <= TileString::tracked_liberties) {
         // store the sorted list of liberties in the liberty list for the
         // string
-        util::const_sort<board_idx_t,
-            TileString::tracked_liberties>(new_liberties);
+        util::const_sort<board_idx_t, TileString::tracked_liberties>(new_liberties);
         __builtin_memcpy(s.liberty_list, new_liberties,
                 TileString::tracked_liberties * sizeof(board_idx_t));
     }
@@ -906,8 +903,8 @@ Color Go::tile_at(coord_t x, coord_t y) const {
 const char * Go::tile_repr_at(coord_t x, coord_t y) const {
     //const static char black_str[] = P_LBLUE "O" P_DEFAULT;
     //const static char white_str[] = P_LRED "O" P_DEFAULT;
-    const static char black_str[] = P_LCYAN "\u25CF" P_DEFAULT;
-    const static char white_str[] = P_LMAGENTA "\u25CF" P_DEFAULT;
+    const static char black_str[] = P_256_COLOR(0) "\u25CF" P_DEFAULT;
+    const static char white_str[] = P_256_COLOR(15) "\u25CF" P_DEFAULT;
     const static char empty_str[] = " ";
 
     const char * ret;
@@ -1030,6 +1027,9 @@ void Go::_do_play(board_idx_t idx, Color color) {
     // don't double count it
     uint32_t first_string_idx = -1;
     uint8_t n_string_joins = 0;
+    uint32_t n_captures = 0, str_idx;
+
+    Color o = other_color(color);
 
     speak("_do_play at %s\n", idx_str(idx).c_str());
 
@@ -1039,12 +1039,20 @@ void Go::_do_play(board_idx_t idx, Color color) {
         n_string_joins += first_string_idx != n_idx;
         first_string_idx = n_idx;
     }
+    else if (tiles[n].color() == o &&
+            strings[(str_idx = tiles[n].string_idx())].liberties == 1) {
+        n_captures += strings[str_idx].size;
+    }
 
     n = idx_left(idx);
     if (tiles[n].color() == color) {
         n_idx = tiles[n].string_idx();
         n_string_joins += first_string_idx != n_idx;
         first_string_idx = n_idx;
+    }
+    else if (tiles[n].color() == o &&
+            strings[(str_idx = tiles[n].string_idx())].liberties == 1) {
+        n_captures += strings[str_idx].size;
     }
 
     n = idx_right(idx);
@@ -1053,12 +1061,20 @@ void Go::_do_play(board_idx_t idx, Color color) {
         n_string_joins += first_string_idx != n_idx;
         first_string_idx = n_idx;
     }
+    else if (tiles[n].color() == o &&
+            strings[(str_idx = tiles[n].string_idx())].liberties == 1) {
+        n_captures += strings[str_idx].size;
+    }
 
     n = idx_down(idx);
     if (tiles[n].color() == color) {
         n_idx = tiles[n].string_idx();
         n_string_joins += first_string_idx != n_idx;
         first_string_idx = n_idx;
+    }
+    else if (tiles[n].color() == o &&
+            strings[(str_idx = tiles[n].string_idx())].liberties == 1) {
+        n_captures += strings[str_idx].size;
     }
 
 
@@ -1074,6 +1090,14 @@ void Go::_do_play(board_idx_t idx, Color color) {
     }
 
     subtract_liberties(idx, color);
+
+    // add captures
+    if (color == Color::black) {
+        black_captures += n_captures;
+    }
+    else {
+        white_captures += n_captures;
+    }
 }
 
 
@@ -1099,7 +1123,11 @@ bool Go::is_star_tile(coord_t x, coord_t y) const {
 }
 
 
-void Go::_print(std::ostream & o) const {
+void Go::_print(std::ostream & o, const std::string & p1_name,
+        const std::string & p2_name) const {
+
+    o << p1_name << " score: " << black_captures << "\n";
+    o << p2_name << " score: " << white_captures << "\n";
 
     uint32_t row_idc_width = util::log10(this->h);
 
@@ -1161,18 +1189,6 @@ void Go::_print(std::ostream & o) const {
                 o << "\n";
             }
         }
-
-        /*
-        if (r != this->h - 1) {
-            o << std::setw(row_idc_width + 1) << "";
-            for (int c = 0; c < this->w; c++) {
-                o << VBAR;
-                if (c != this->w - 1) {
-                    o << "   ";
-                }
-            }
-            o << "\n";
-        }*/
     }
 }
 
@@ -1257,7 +1273,8 @@ void Go::_print_dbg(std::ostream & o,
 
 
 
-Go::Go(coord_t w, coord_t h) : w(w), h(h), turn(0) {
+Go::Go(coord_t w, coord_t h) : w(w), h(h), turn(0), black_captures(0),
+        white_captures(0) {
     // includes the borders
     this->n_tiles = (this->w + 2) * (this->h + 2);
     this->max_n_strings = this->calc_max_n_strings();
@@ -1273,7 +1290,8 @@ Go::Go(coord_t w, coord_t h) : w(w), h(h), turn(0) {
 
 Go::Go(const Go & g) : w(g.w), h(g.h), turn(g.turn),
         g_data_size(g.g_data_size), n_tiles(g.n_tiles),
-        max_n_strings(g.max_n_strings), free_strings(g.free_strings) {
+        max_n_strings(g.max_n_strings), free_strings(g.free_strings),
+        black_captures(g.black_captures), white_captures(g.white_captures) {
     this->g_data = malloc(g_data_size + Go::g_data_alignment);
     __builtin_memcpy(this->g_data, g.g_data, g_data_size + Go::g_data_alignment);
     this->__assign_memory();
@@ -1305,6 +1323,11 @@ void Go::play(GameMove & m) {
     GO_ASSERT(!is_stone(idx), "%s is already occupied", idx_str(idx).c_str());
     GO_ASSERT(!move_is_suicide(idx, gm.color), "move %s is suicidal",
             idx_str(idx).c_str());
+    GO_ASSERT(gm.x < this->w && gm.y < this->h, "move is out of bounds");
+    GO_ASSERT((turn & 1) ? (gm.color == Color::white) : (gm.color == Color::black),
+            "tried playing %s on turn %u",
+            (gm.color == white ? "white" : gm.color == black ? "black" : "no color"),
+            this->turn);
 
     this->_do_play(idx, gm.color);
     this->turn++;
@@ -1327,8 +1350,15 @@ uint32_t Go::print_width() const {
 }
 
 
+void Go::print_named(std::ostream & o,
+        const std::string & p1_name,
+        const std::string & p2_name) const {
+    this->_print(o, p1_name, p2_name);
+}
+
+
 void Go::print(std::ostream & o) const {
-    this->_print(o);
+    this->_print(o, default_p1_name, default_p2_name);
 }
 
 void Go::print_libs(std::ostream & o) const {

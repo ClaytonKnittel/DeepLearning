@@ -56,6 +56,9 @@ public:
     // the width of a single tile when the board is printed as unicode text
     static constexpr const uint32_t max_piece_print_width = 3;
 
+    static constexpr const char default_p1_name[] = "black";
+    static constexpr const char default_p2_name[] = "white";
+
 private:
 
     coord_t w, h;
@@ -67,6 +70,10 @@ private:
     uint32_t max_n_strings;
     // index of first TileString not allocated, or -1 if all are allocated
     int free_strings;
+
+    // the number of captures black/white have made,
+    // respectively
+    uint32_t black_captures, white_captures;
 
 
     /*
@@ -295,7 +302,8 @@ private:
         const std::function<const char *(int, int)> & print_fn,
         int piece_width) const;
 
-    void _print(std::ostream &) const;
+    void _print(std::ostream &, const std::string & p1_name,
+            const std::string & p2_name) const;
 
 public:
 
@@ -335,6 +343,10 @@ public:
 
     // gives the width of the Go board when printed as unicode text
     uint32_t print_width() const;
+
+    virtual void print_named(std::ostream &,
+            const std::string & p1_name,
+            const std::string & p2_name) const;
 
     virtual void print(std::ostream &) const;
 
