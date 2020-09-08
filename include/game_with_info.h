@@ -3,20 +3,17 @@
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <vector>
 #include <curses.h>
 
 #include <go.h>
 
 
-class GameWithInfo : public Go {
+class GameWithInfo : public Game {
 private:
 
-    std::string p1_name, p2_name;
+    Game * parent;
 
-    size_t h_idx;
-    std::vector<board_idx_t> last_moves;
-    std::vector<Go> history;
+    std::string p1_name, p2_name;
 
     void print_to(const std::string & s) const {
         ::clear();
@@ -75,14 +72,9 @@ private:
 
 public:
 
-    template<typename ...Args>
-    GameWithInfo(Args... args) : Go(args...),
+    GameWithInfo(Game * parent) : parent(parent),
             p1_name(Go::default_p1_name),
-            p2_name(Go::default_p2_name),
-            h_idx(0) {
-
-        last_moves.push_back(-1);
-        history.push_back(*this);
+            p2_name(Go::default_p2_name) {
 
         setlocale(LC_ALL, "");
         // initialize ncurses
@@ -103,6 +95,14 @@ public:
         init_color(COLOR_BLUE, 537, 804, 825);
     }
 
+    virtual Game & operator=(const Game & g) {
+        return (*parent) = g;
+    }
+
+    virtual Game & operator=(Game && g) {
+        return (*parent) = g;
+    }
+
     virtual ~GameWithInfo() {
         endwin();
     }
@@ -115,41 +115,71 @@ public:
         p2_name = name;
     }
 
-    /*
-     * returns true if the game is current (i.e. there are no moves
-     * ahead of the current state recorded in history)
-     */
+    virtual void print(std::ostream & o) const {
+        std::ostringstream os;
+        parent->print_named(os, p1_name, p2_name);
+        print_to(os.str());
+    }
+
+
+    virtual coord_t width() const {
+        return parent->width();
+    }
+
+    virtual coord_t height() const {
+        return parent->height();
+    }
+
+    virtual uint16_t get_turn() const {
+        return parent->get_turn();
+    }
+
+    virtual std::shared_ptr<Game> clone() const {
+        return parent->clone();
+    }
+
+    virtual bool game_over() const {
+        return parent->game_over();
+    }
+
+    virtual int get_score() const {
+        return parent->get_score();
+    }
+
+    virtual bool max_player() const {
+        return parent->max_player();
+    }
+
     virtual bool is_current() const {
-        return h_idx + 1 == history.size();
+        return parent->is_current();
     }
 
     virtual void play(GameMove & m) {
-        GoMove & gm = dynamic_cast<GoMove &>(m);
-        last_moves.push_back(to_idx(gm.x, gm.y));
-        Go::play(m);
-        h_idx++;
-        history.push_back(*this);
+        parent->play(m);
     }
 
     virtual void undo() {
-        if (h_idx > 0) {
-            h_idx--;
-            Go::operator=(history[h_idx]);
-        }
+        parent->undo();
     }
 
     virtual void redo() {
-        if (h_idx + 1 < history.size()) {
-            h_idx++;
-            Go::operator=(history[h_idx]);
-        }
+        parent->redo();
     }
 
-    virtual void print(std::ostream & o) const {
-        std::ostringstream os;
-        this->print_named(os, p1_name, p2_name, last_moves[h_idx]);
-        print_to(os.str());
+    virtual void for_each_legal_move(std::function<void(Game &, GameMove &)> f) {
+        parent->for_each_legal_move(f);
     }
+
+    virtual void print_named(std::ostream & o,
+            const std::string & p1_name,
+            const std::string & p2_name) const {
+        parent->print_named(o, p1_name, p2_name);
+    }
+
+    virtual void consistency_check() const {
+        parent->consistency_check();
+    }
+
 };
 
 

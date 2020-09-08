@@ -9,7 +9,7 @@
 
 class FileMove : public MoveGen {
 private:
-    Go & game;
+    Game & game;
 
     std::vector<GoMove> moves;
 
@@ -17,7 +17,7 @@ private:
 
 public:
 
-    FileMove(const std::string & file_name, Go & game);
+    FileMove(const std::string & file_name, Game & game);
 
     virtual ~FileMove() = default;
 

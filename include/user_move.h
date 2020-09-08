@@ -6,10 +6,10 @@
 
 class UserMove : public MoveGen {
 private:
-    Go & game;
+    Game & game;
 public:
 
-    UserMove(Go & game) : game(game) {}
+    UserMove(Game & game) : game(game) {}
 
     virtual ~UserMove() = default;
 

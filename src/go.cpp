@@ -21,18 +21,6 @@
 #endif
 
 
-static constexpr const size_t runtime_err_buf_size = 1024;
-static char runtime_err_buf[runtime_err_buf_size];
-
-#define VA_ARGS(...) , ##__VA_ARGS__
-#define GO_ASSERT(expr, msg, ...) \
-    if (__builtin_expect(!(expr), 0)) { \
-        snprintf(runtime_err_buf, runtime_err_buf_size, msg \
-                VA_ARGS(__VA_ARGS__)); \
-        throw std::runtime_error(runtime_err_buf); \
-    }
-
-
 
 struct Tile {
     static constexpr const uint8_t num_neighbors = 4;
@@ -1126,11 +1114,6 @@ void Go::_do_play(board_idx_t idx, Color color) {
 }
 
 
-void Go::_do_undo() {
-    throw std::runtime_error("undo not yet implemented");
-}
-
-
 bool Go::is_star_tile(coord_t x, coord_t y) const {
     if (this->w == 19 && this->h == 19) {
         return (x == 3 || x == 9 || x == 15) &&
@@ -1149,7 +1132,7 @@ bool Go::is_star_tile(coord_t x, coord_t y) const {
 
 
 void Go::_print(std::ostream & o, const std::string & p1_name,
-        const std::string & p2_name, board_idx_t last_move) const {
+        const std::string & p2_name) const {
 
     o << p1_name << " score: " << black_captures << "\n";
     o << p2_name << " score: " << white_captures << "\n";
@@ -1213,13 +1196,7 @@ void Go::_print(std::ostream & o, const std::string & p1_name,
                 }
             }
             if (c != this->w - 1) {
-                /*if (to_idx(c, r) == last_move ||
-                        to_idx(c + 1, r) == last_move) {
-                    o << P_RED "\u2500" P_DEFAULT;
-                }
-                else {*/
-                    o << "\u2500";
-                //}
+                o << "\u2500";
             }
             else {
                 o << "\n";
@@ -1309,8 +1286,12 @@ void Go::_print_dbg(std::ostream & o,
 
 
 
-Go::Go(coord_t w, coord_t h) : w(w), h(h), turn(0), black_captures(0),
-        white_captures(0) {
+Go::Go() : g_data(nullptr) {
+}
+
+
+Go::Go(coord_t w, coord_t h) : w(w), h(h), turn(0), last_move(-1),
+        black_captures(0), white_captures(0) {
     // includes the borders
     this->n_tiles = (this->w + 2) * (this->h + 2);
     this->max_n_strings = this->calc_max_n_strings();
@@ -1324,7 +1305,7 @@ Go::Go(coord_t w, coord_t h) : w(w), h(h), turn(0), black_captures(0),
 }
 
 
-Go::Go(const Go & g) : w(g.w), h(g.h), turn(g.turn),
+Go::Go(const Go & g) : w(g.w), h(g.h), turn(g.turn), last_move(g.last_move),
         g_data_size(g.g_data_size), n_tiles(g.n_tiles),
         max_n_strings(g.max_n_strings), free_strings(g.free_strings),
         black_captures(g.black_captures), white_captures(g.white_captures) {
@@ -1335,7 +1316,7 @@ Go::Go(const Go & g) : w(g.w), h(g.h), turn(g.turn),
 }
 
 
-Go::Go(Go && g) : w(g.w), h(g.h), turn(g.turn),
+Go::Go(Go && g) : w(g.w), h(g.h), turn(g.turn), last_move(g.last_move),
         g_data_size(g.g_data_size), n_tiles(g.n_tiles),
         max_n_strings(g.max_n_strings), free_strings(g.free_strings),
         black_captures(g.black_captures), white_captures(g.white_captures) {
@@ -1353,6 +1334,7 @@ Go & Go::operator=(const Go & g) {
     w = g.w;
     h = g.h;
     turn = g.turn;
+    last_move = g.last_move;
     g_data_size = g.g_data_size;
     n_tiles = g.n_tiles;
     max_n_strings = g.max_n_strings;
@@ -1371,10 +1353,16 @@ Go & Go::operator=(const Go & g) {
     return *this;
 }
 
+Game & Go::operator=(const Game & game) {
+    const Go & g = dynamic_cast<const Go &>(game);
+    return (*this) = g;
+}
+
 Go & Go::operator=(Go && g) {
     w = g.w;
     h = g.h;
     turn = g.turn;
+    last_move = g.last_move;
     g_data_size = g.g_data_size;
     n_tiles = g.n_tiles;
     max_n_strings = g.max_n_strings;
@@ -1395,11 +1383,21 @@ Go & Go::operator=(Go && g) {
     return *this;
 }
 
+Game & Go::operator=(Game && game) {
+    const Go && g = dynamic_cast<const Go &&>(game);
+    return (*this) = g;
+}
+
 
 Go::~Go() {
     if (g_data) {
         free(g_data);
     }
+}
+
+
+std::shared_ptr<Game> Go::clone() const {
+    return std::make_shared<Go>(*this);
 }
 
 
@@ -1435,10 +1433,11 @@ void Go::play(GameMove & m) {
 
     this->_do_play(idx, gm.color);
     this->turn++;
+    this->last_move = idx;
 }
 
 void Go::undo() {
-    this->_do_undo();
+    GO_ASSERT(false, "undo not implemented");
 }
 
 void Go::redo() {
@@ -1458,14 +1457,13 @@ uint32_t Go::print_width() const {
 
 void Go::print_named(std::ostream & o,
         const std::string & p1_name,
-        const std::string & p2_name,
-        board_idx_t last_move) const {
-    this->_print(o, p1_name, p2_name, last_move);
+        const std::string & p2_name) const {
+    this->_print(o, p1_name, p2_name);
 }
 
 
 void Go::print(std::ostream & o) const {
-    this->_print(o, default_p1_name, default_p2_name, -1);
+    this->_print(o, default_p1_name, default_p2_name);
 }
 
 void Go::print_libs(std::ostream & o) const {

@@ -10,9 +10,6 @@
 typedef uint16_t go_turn_t;
 typedef uint8_t player_t;
 
-typedef uint16_t board_idx_t;
-typedef uint8_t coord_t;
-
 
 enum Color {
     empty = 0,
@@ -64,6 +61,8 @@ private:
     coord_t w, h;
 
     uint16_t turn;
+
+    board_idx_t last_move;
 
     size_t g_data_size;
     uint32_t n_tiles;
@@ -294,12 +293,6 @@ private:
      */
     void _do_play(board_idx_t idx, Color color);
 
-    /*
-     * undoes the last move, returning the game state to the previous
-     * configuration
-     */
-    void _do_undo();
-
 
     /*
      * returns true if the tile at (x, y) is a star tile (only applicable to
@@ -313,8 +306,14 @@ private:
         int piece_width) const;
 
     void _print(std::ostream &, const std::string & p1_name,
-            const std::string & p2_name,
-            board_idx_t last_move) const;
+            const std::string & p2_name) const;
+
+
+protected:
+
+    // the default constructor is only used by decorators to
+    // avoid unecessary initialization of unused data
+    Go();
 
 public:
 
@@ -325,23 +324,28 @@ public:
     Go(Go && g);
 
     Go & operator=(const Go & g);
+    virtual Game & operator=(const Game & g);
 
     Go & operator=(Go && g);
+    virtual Game & operator=(Game && g);
 
     virtual ~Go();
 
-    coord_t width() const {
+
+    virtual coord_t width() const {
         return w;
     }
 
-    coord_t height() const {
+    virtual coord_t height() const {
         return h;
     }
 
-    uint16_t get_turn() const {
+    virtual uint16_t get_turn() const {
         return turn;
     }
 
+
+    virtual std::shared_ptr<Game> clone() const;
 
     virtual bool game_over() const;
 
@@ -365,8 +369,7 @@ public:
 
     virtual void print_named(std::ostream &,
             const std::string & p1_name,
-            const std::string & p2_name,
-            board_idx_t last_move) const;
+            const std::string & p2_name) const;
 
     virtual void print(std::ostream &) const;
 
@@ -376,12 +379,7 @@ public:
 
     void print_tile_idx(std::ostream &) const;
 
-
-    /*
-     * performs a consistency check on the Go state, throwing an exception
-     * upon failure
-     */
-    void consistency_check() const;
+    virtual void consistency_check() const;
 
 };
 

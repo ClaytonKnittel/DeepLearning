@@ -27,7 +27,7 @@ MoveStatus UserMove::next_move(GameMove & move) {
         }
     }
 
-    if (!std::cin || buf == "quit" || buf == "q" || buf == "exit") {
+    if (buf == "quit" || buf == "q" || buf == "exit") {
         return failed;
     }
 

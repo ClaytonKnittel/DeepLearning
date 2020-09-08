@@ -11,6 +11,7 @@
 #include <fun/print_colors.h>
 
 #include <file_move.h>
+#include <game_with_history.h>
 #include <game_with_info.h>
 #include <go.h>
 #include <user_move.h>
@@ -48,15 +49,17 @@ void interleave_print(const Go & g) {
     }
 }
 
-void regular_print(const Go & g) {
+void regular_print(const Game & g) {
     std::cout << g << std::endl;
 }
 
 int main(int argc, char * argv[]) {
 
-    GameWithInfo g(19, 19);
+    Go game(19, 19);
+    GameWithHistory gh(&game);
+    GameWithInfo g(&gh);
 
-    void(*print_fn)(const Go &) = regular_print;
+    void(*print_fn)(const Game &) = regular_print;
 
     bool print = true;
 

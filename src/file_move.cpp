@@ -63,7 +63,7 @@ void FileMove::find_moves(const std::string & file_name) {
 }
 
 
-FileMove::FileMove(const std::string & file_name, Go & game) :
+FileMove::FileMove(const std::string & file_name, Game & game) :
             game(game) {
 
     find_moves(file_name);

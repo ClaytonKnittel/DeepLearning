@@ -1,6 +1,19 @@
 #pragma once
 
 #include <functional>
+#include <memory>
+
+
+static constexpr const size_t runtime_err_buf_size = 1024;
+static char runtime_err_buf[runtime_err_buf_size];
+
+#define VA_ARGS(...) , ##__VA_ARGS__
+#define GO_ASSERT(expr, msg, ...) \
+    if (__builtin_expect(!(expr), 0)) { \
+        snprintf(runtime_err_buf, runtime_err_buf_size, msg \
+                VA_ARGS(__VA_ARGS__)); \
+        throw std::runtime_error(runtime_err_buf); \
+    }
 
 /*
  * to be overridden by the individual game move objects
@@ -12,10 +25,47 @@ public:
 };
 
 
+typedef uint16_t board_idx_t;
+typedef uint8_t coord_t;
+
+
 class Game {
 public:
 
     virtual ~Game() = default;
+
+
+    /*
+     * copy assignment
+     */
+    virtual Game & operator=(const Game & g) = 0;
+
+    /*
+     * move assignment
+     */
+    virtual Game & operator=(Game && g) = 0;
+
+
+    /*
+     * returns the width of the playable area
+     */
+    virtual coord_t width() const = 0;
+
+    /*
+     * returns the height of the playable area
+     */
+    virtual coord_t height() const = 0;
+
+    /*
+     * returns the current turn number
+     */
+    virtual uint16_t get_turn() const = 0;
+
+    /*
+     * makes a clone of the game and returns a shared pointer
+     * to it
+     */
+    virtual std::shared_ptr<Game> clone() const = 0;
 
     /*
      * returns true if the game is over, false otherwise
@@ -62,9 +112,22 @@ public:
 
 
     /*
+     * prints the game state with the two players as named
+     */
+    virtual void print_named(std::ostream &,
+            const std::string & p1_name,
+            const std::string & p2_name) const = 0;
+
+    /*
      * prints the game state to the given output stream
      */
     virtual void print(std::ostream &) const = 0;
+
+    /*
+     * performs a consistency check on the Go state, throwing an exception
+     * upon failure
+     */
+    virtual void consistency_check() const = 0;
 
 };
 
