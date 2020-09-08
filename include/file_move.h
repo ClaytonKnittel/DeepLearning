@@ -10,11 +10,10 @@
 class FileMove : public MoveGen {
 private:
     Go & game;
-    std::ifstream f;
 
-    std::shared_ptr<std::string> str;
-    std::shared_ptr<std::regex> r;
-    std::shared_ptr<std::sregex_iterator> begin, end;
+    std::vector<GoMove> moves;
+
+    void find_moves(const std::string &);
 
 public:
 

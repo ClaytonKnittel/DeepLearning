@@ -39,9 +39,9 @@ public:
     virtual void play(GameMove & m) = 0;
 
     /*
-     * undoes the given move, which must have been the last move played
+     * undoes the last move
      */
-    virtual void undo(GameMove & m) = 0;
+    virtual void undo() = 0;
 
     /*
      * iterates over legal moves in current game state, calling f with arguments

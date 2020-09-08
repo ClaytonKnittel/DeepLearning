@@ -89,6 +89,7 @@ public:
         init_pair(2, COLOR_BLACK,  -1);
         init_pair(3, COLOR_YELLOW, -1);
         init_pair(4, COLOR_BLUE,   -1);
+        init_pair(5, COLOR_RED,    -1);
 
         init_color(COLOR_YELLOW, 992, 992, 558);
         init_color(COLOR_BLUE, 537, 804, 825);

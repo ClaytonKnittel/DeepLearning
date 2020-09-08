@@ -347,7 +347,7 @@ public:
 
     virtual void play(GameMove & m);
 
-    virtual void undo(GameMove & m);
+    virtual void undo();
 
     virtual void for_each_legal_move(std::function<void(Game &, GameMove &)> f);
 

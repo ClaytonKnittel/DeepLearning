@@ -7,7 +7,8 @@
 enum MoveStatus {
     ok,
     retry,
-    failed
+    failed,
+    undo
 };
 
 class MoveGen {

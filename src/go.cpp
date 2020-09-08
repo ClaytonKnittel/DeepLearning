@@ -1127,7 +1127,7 @@ void Go::_do_play(board_idx_t idx, Color color) {
 
 
 void Go::_do_undo() {
-    assert(0);
+    throw std::runtime_error("undo not yet implemented");
 }
 
 
@@ -1369,9 +1369,7 @@ void Go::play(GameMove & m) {
     this->turn++;
 }
 
-void Go::undo(GameMove & m) {
-    GoMove & gm = dynamic_cast<GoMove &>(m);
-    (void) gm;
+void Go::undo() {
     this->_do_undo();
 }
 

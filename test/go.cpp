@@ -6,6 +6,7 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <curses.h>
 
 #include <fun/print_colors.h>
 
@@ -85,7 +86,7 @@ int main(int argc, char * argv[]) {
             print_fn(g);
         }
         print = true;
-        bool again = false, game_over = false;
+        bool again = false, game_over = false, undoes = false;;
 
         GoMove m;
         switch (move_gen->next_move(m)) {
@@ -98,17 +99,30 @@ int main(int argc, char * argv[]) {
             case failed:
                 game_over = true;
                 break;
+            case undo:
+                undoes = true;
+                break;
         }
 
         if (again) continue;
         if (game_over) break;
 
         try {
-            g.play(m);
+            if (undoes) {
+                g.undo();
+            }
+            else {
+                g.play(m);
+            }
             g.consistency_check();
         } catch (const std::runtime_error & e) {
             print_fn(g);
-            std::cerr << P_RED << e.what() << P_DEFAULT << std::endl;
+            //std::cerr << P_RED << e.what() << P_DEFAULT << std::endl;
+            attron(COLOR_PAIR(5));
+            printw("%s\n", e.what());
+            attroff(COLOR_PAIR(5));
+            refresh();
+            getch();
             break;
         }
     }
