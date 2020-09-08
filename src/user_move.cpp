@@ -34,7 +34,7 @@ MoveStatus UserMove::next_move(GameMove & move) {
     int r;
     char c_let;
     if (sscanf(buf.c_str(), "%c%d", &c_let, &r) != 2) {
-        fprintf(stderr, "\nUnable to parse\n");
+        fprintf(stderr, "\r\nUnable to parse\r\n");
         return retry;
     }
 
@@ -44,7 +44,7 @@ MoveStatus UserMove::next_move(GameMove & move) {
     m.y = game.height() - r;
 
     if (c_let == 'I' || m.x >= game.width() || m.y >= game.height()) {
-        fprintf(stderr, "\nUnknown tile\n");
+        fprintf(stderr, "\r\nUnknown tile\r\n");
         return retry;
     }
     return ok;
