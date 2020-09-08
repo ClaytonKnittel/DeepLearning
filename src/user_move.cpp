@@ -11,7 +11,20 @@ MoveStatus UserMove::next_move(GameMove & move) {
 
     char ch;
     while ((ch = getch()) != '\n') {
-        buf += ch;
+        if (ch == 127) {
+            // delete character
+            if (buf.size() > 0) {
+                buf.pop_back();
+                delch();
+                int x, y;
+                getyx(curscr, y, x);
+                mvdelch(y, x - 1);
+            }
+        }
+        else {
+            buf += ch;
+            printw("%c", ch);
+        }
     }
 
     if (!std::cin || buf == "quit" || buf == "q" || buf == "exit") {
@@ -21,7 +34,7 @@ MoveStatus UserMove::next_move(GameMove & move) {
     int r;
     char c_let;
     if (sscanf(buf.c_str(), "%c%d", &c_let, &r) != 2) {
-        fprintf(stderr, "Unable to parse\n");
+        fprintf(stderr, "\nUnable to parse\n");
         return retry;
     }
 
@@ -31,7 +44,7 @@ MoveStatus UserMove::next_move(GameMove & move) {
     m.y = game.height() - r;
 
     if (c_let == 'I' || m.x >= game.width() || m.y >= game.height()) {
-        fprintf(stderr, "Unknown tile\n");
+        fprintf(stderr, "\nUnknown tile\n");
         return retry;
     }
     return ok;
