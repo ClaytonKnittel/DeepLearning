@@ -91,6 +91,8 @@ private:
     struct TileString * strings;
 
 
+protected:
+
     board_idx_t to_idx(coord_t x, coord_t y) const;
 
 
@@ -104,6 +106,8 @@ private:
      */
     std::string idx_str(board_idx_t idx) const;
 
+
+private:
 
     /*
      * returns true if the color at idx can be treated as "color" (either
@@ -268,6 +272,12 @@ private:
     const char * tile_repr_at(coord_t x, coord_t y) const;
 
     /*
+     * returns string representation of tile at given coordinates to be used
+     * when the tile is highlighted for any reason
+     */
+    const char * selected_tile_repr_at(coord_t x, coord_t y) const;
+
+    /*
      * checks whether the move is suicidal
      */
     bool move_is_suicide(board_idx_t idx, Color color) const;
@@ -303,7 +313,8 @@ private:
         int piece_width) const;
 
     void _print(std::ostream &, const std::string & p1_name,
-            const std::string & p2_name) const;
+            const std::string & p2_name,
+            board_idx_t last_move) const;
 
 public:
 
@@ -346,7 +357,8 @@ public:
 
     virtual void print_named(std::ostream &,
             const std::string & p1_name,
-            const std::string & p2_name) const;
+            const std::string & p2_name,
+            board_idx_t last_move) const;
 
     virtual void print(std::ostream &) const;
 

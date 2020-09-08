@@ -67,6 +67,10 @@ int main(int argc, char * argv[]) {
             case 'f':
                 move_gen = std::make_shared<FileMove>(optarg, g);
                 break;
+            case '?':
+            default:
+                std::cout << "usage: " << argv[0] << " [-f <sgf file>]" << std::endl;
+                return -1;
         }
     }
 

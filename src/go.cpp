@@ -901,10 +901,35 @@ Color Go::tile_at(coord_t x, coord_t y) const {
 
 
 const char * Go::tile_repr_at(coord_t x, coord_t y) const {
-    //const static char black_str[] = P_LBLUE "O" P_DEFAULT;
-    //const static char white_str[] = P_LRED "O" P_DEFAULT;
     const static char black_str[] = P_256_COLOR(0) "\u25CF" P_DEFAULT;
     const static char white_str[] = P_256_COLOR(15) "\u25CF" P_DEFAULT;
+    const static char empty_str[] = " ";
+
+    const char * ret;
+
+    Color tile = this->tile_at(x, y);
+
+    switch (tile) {
+        case empty:
+            ret = empty_str;
+            break;
+        case black:
+            ret = black_str;
+            break;
+        case white:
+            ret = white_str;
+            break;
+        default:
+            GO_ASSERT(0, "No such tile %d", tile);
+            __builtin_unreachable();
+    }
+    return ret;
+}
+
+
+const char * Go::selected_tile_repr_at(coord_t x, coord_t y) const {
+    const static char black_str[] = P_256_COLOR(18) "\u25CF" P_DEFAULT;
+    const static char white_str[] = P_256_COLOR(227) "\u25CF" P_DEFAULT;
     const static char empty_str[] = " ";
 
     const char * ret;
@@ -1124,7 +1149,7 @@ bool Go::is_star_tile(coord_t x, coord_t y) const {
 
 
 void Go::_print(std::ostream & o, const std::string & p1_name,
-        const std::string & p2_name) const {
+        const std::string & p2_name, board_idx_t last_move) const {
 
     o << p1_name << " score: " << black_captures << "\n";
     o << p2_name << " score: " << white_captures << "\n";
@@ -1142,7 +1167,12 @@ void Go::_print(std::ostream & o, const std::string & p1_name,
         o << std::setw(row_idc_width) << this->h - r << " ";
         for (int c = 0; c < this->w; c++) {
             if (is_stone(to_idx(c, r))) {
-                o << tile_repr_at(c, r);
+                if (to_idx(c, r) == last_move) {
+                    o << selected_tile_repr_at(c, r);
+                }
+                else {
+                    o << tile_repr_at(c, r);
+                }
             }
             else {
                 if (is_star_tile(c, r)) {
@@ -1183,7 +1213,13 @@ void Go::_print(std::ostream & o, const std::string & p1_name,
                 }
             }
             if (c != this->w - 1) {
-                o << "\u2500";
+                /*if (to_idx(c, r) == last_move ||
+                        to_idx(c + 1, r) == last_move) {
+                    o << P_RED "\u2500" P_DEFAULT;
+                }
+                else {*/
+                    o << "\u2500";
+                //}
             }
             else {
                 o << "\n";
@@ -1352,13 +1388,14 @@ uint32_t Go::print_width() const {
 
 void Go::print_named(std::ostream & o,
         const std::string & p1_name,
-        const std::string & p2_name) const {
-    this->_print(o, p1_name, p2_name);
+        const std::string & p2_name,
+        board_idx_t last_move) const {
+    this->_print(o, p1_name, p2_name, last_move);
 }
 
 
 void Go::print(std::ostream & o) const {
-    this->_print(o, default_p1_name, default_p2_name);
+    this->_print(o, default_p1_name, default_p2_name, -1);
 }
 
 void Go::print_libs(std::ostream & o) const {

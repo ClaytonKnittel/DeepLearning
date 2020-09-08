@@ -12,7 +12,7 @@ IFLAGS=-I$(BASE_DIR)/include -I$(CPPFLOW_DIR)/include -I$(UTIL_DIR)/include
 #-I/library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/site-packages/tensorflow/include
 
 DEBUG=1
-VERBOSE=1
+VERBOSE=0
 
 ifeq ($(DEBUG), 0)
 _TMP_CFLAGS=-std=c++17 -O3 -Wall -Wno-unused-function -MMD -MP
