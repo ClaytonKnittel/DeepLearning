@@ -26,5 +26,5 @@ else
 CFLAGS=$(_TMP_CFLAGS)
 endif
 
-LDFLAGS=-flto -L$(LIB_DIR) -L$(BASE_DIR)/utils/lib -ltensorflow -lcppflow -lutil
+LDFLAGS=-flto -L$(LIB_DIR) -L$(BASE_DIR)/utils/lib -ltensorflow -lcppflow -lutil -lncurses
 

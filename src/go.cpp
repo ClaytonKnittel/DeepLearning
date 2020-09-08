@@ -901,8 +901,8 @@ Color Go::tile_at(coord_t x, coord_t y) const {
 
 
 const char * Go::tile_repr_at(coord_t x, coord_t y) const {
-    const static char black_str[] = P_256_COLOR(0) "\u25CF" P_DEFAULT;
-    const static char white_str[] = P_256_COLOR(15) "\u25CF" P_DEFAULT;
+    const static char black_str[] = P_BLACK "\u25CF" P_DEFAULT;
+    const static char white_str[] = P_WHITE "\u25CF" P_DEFAULT;
     const static char empty_str[] = " ";
 
     const char * ret;
@@ -928,8 +928,8 @@ const char * Go::tile_repr_at(coord_t x, coord_t y) const {
 
 
 const char * Go::selected_tile_repr_at(coord_t x, coord_t y) const {
-    const static char black_str[] = P_256_COLOR(18) "\u25CF" P_DEFAULT;
-    const static char white_str[] = P_256_COLOR(227) "\u25CF" P_DEFAULT;
+    const static char black_str[] = P_BLUE "\u25CF" P_DEFAULT;
+    const static char white_str[] = P_YELLOW "\u25CF" P_DEFAULT;
     const static char empty_str[] = " ";
 
     const char * ret;

@@ -1,13 +1,18 @@
 
 #include <iostream>
 #include <string>
+#include <curses.h>
 
 #include <user_move.h>
 
 
 MoveStatus UserMove::next_move(GameMove & move) {
     std::string buf;
-    std::cin >> buf;
+
+    char ch;
+    while ((ch = getch()) != '\n') {
+        buf += ch;
+    }
 
     if (!std::cin || buf == "quit" || buf == "q" || buf == "exit") {
         return failed;
