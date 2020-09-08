@@ -51,6 +51,7 @@ void interleave_print(const Go & g) {
 
 void regular_print(const Game & g) {
     std::cout << g << std::endl;
+    printw("score: %d\n", g.get_score());
 }
 
 int main(int argc, char * argv[]) {

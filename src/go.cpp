@@ -3,6 +3,7 @@
 #include <sstream>
 #include <iomanip>
 #include <stdexcept>
+#include <unordered_map>
 #include <map>
 #include <unordered_set>
 #include <set>
@@ -12,6 +13,7 @@
 #include <fun/print_colors.h>
 #include <util/util.h>
 #include <algorithms/sort.h>
+#include <data_structs/union_find.h>
 
 
 #ifdef VERBOSE
@@ -20,6 +22,22 @@
 #define speak(...)
 #endif
 
+
+#include <curses.h>
+
+
+
+#define FOR_EACH_ADJ(idx, n, action) \
+    do { \
+        n = idx_up((idx)); \
+        action \
+        n = idx_left((idx)); \
+        action \
+        n = idx_right((idx)); \
+        action \
+        n = idx_down((idx)); \
+        action \
+    } while (0)
 
 
 struct Tile {
@@ -1406,11 +1424,73 @@ bool Go::game_over() const {
 }
 
 int Go::get_score() const {
+    constexpr const static uint8_t touch_black = (uint8_t) Color::black;
+    constexpr const static uint8_t touch_white = (uint8_t) Color::white;
+
+    union_find uf;
+    uf_init(&uf, (this->w + 2) * (this->h + 2));
+
+    std::unordered_map<uf_node_t, std::pair<uint16_t, uint8_t>> regs;
+
+    for (coord_t y = 0; y < this->h; y++) {
+        for (coord_t x = 0; x < this->w; x++) {
+            board_idx_t idx = to_idx(x, y);
+
+            if (is_liberty(idx)) {
+                uf_node_t p = uf_find(&uf, idx);
+
+                uint16_t cnt;
+                uint8_t touching;
+
+                auto it1 = regs.find(p);
+                if (it1 != regs.end()) {
+                    cnt = it1->second.first;
+                    touching = it1->second.second;
+                }
+                else {
+                    cnt = 1;
+                    touching = 0;
+                }
+                printw("%s -> %u ", idx_str(idx).c_str(), cnt);
+                board_idx_t n;
+
+                FOR_EACH_ADJ(idx, n, {
+                    if (is_liberty(n)) {
+                        uf_node_t parent = uf_find(&uf, n);
+                        if (parent != p) {
+                            auto it = regs.find(parent);
+                            if (it != regs.end()) {
+                                cnt += it->second.first;
+                                touching |= it->second.second;
+                                regs.erase(it);
+                            }
+                            else {
+                                cnt++;
+                            }
+                            p = uf_union(&uf, parent, p);
+                        }
+                    }
+                    else if (is_stone(n)) {
+                        touching |= (uint8_t) tiles[n].color();
+                    }
+                });
+
+                regs.insert({ p, { cnt, touching } });
+            }
+        }
+    }
+
+    for (auto it = regs.begin(); it != regs.end(); it++) {
+        printw("%s -> (%u, %u)\n", idx_str(it->first).c_str(), it->second.first, it->second.second);
+    }
+
+    uf_destroy(&uf);
     return 0;
 }
 
 bool Go::max_player() const {
-    return true;
+    // black (first player) is maximizing player
+    return (turn & 1) == 0;
 }
 
 bool Go::is_current() const {
