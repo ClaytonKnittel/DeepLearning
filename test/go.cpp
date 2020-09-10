@@ -86,7 +86,7 @@ int main(int argc, char * argv[]) {
     while ((opt = getopt(argc, argv, "af:")) != -1) {
         switch(opt) {
             case 'a':
-                move_gen = std::make_shared<AlphaBetaMove>(g, 1);
+                move_gen = std::make_shared<AlphaBetaMove>(g, 13);
                 break;
             case 'f':
                 move_gen = std::make_shared<FileMove>(optarg, g);

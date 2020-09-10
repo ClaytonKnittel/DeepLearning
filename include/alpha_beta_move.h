@@ -9,7 +9,8 @@ class AlphaBetaMove : public MoveGen {
 private:
 
     static constexpr const int inf_depth = -1;
-    static constexpr const int min_int = std::numeric_limits<int>::min();
+    static constexpr const int min_int =
+        std::numeric_limits<int>::min() + 1;
     static constexpr const int max_int = std::numeric_limits<int>::max();
 
     Game & game;
