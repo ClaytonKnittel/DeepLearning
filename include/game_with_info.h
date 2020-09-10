@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <curses.h>
@@ -11,7 +12,7 @@
 class GameWithInfo : public Game {
 private:
 
-    Game * parent;
+    std::shared_ptr<Game> parent;
 
     std::string p1_name, p2_name;
 
@@ -70,9 +71,10 @@ private:
         refresh();
     }
 
+
 public:
 
-    GameWithInfo(Game * parent) : parent(parent),
+    GameWithInfo(std::shared_ptr<Game> parent) : parent(parent),
             p1_name(Go::default_p1_name),
             p2_name(Go::default_p2_name) {
 
@@ -93,6 +95,10 @@ public:
 
         init_color(COLOR_YELLOW, 992, 992, 558);
         init_color(COLOR_BLUE, 537, 804, 825);
+    }
+
+    GameWithInfo(const GameWithInfo & g) : parent(parent->clone()),
+            p1_name(g.p1_name), p2_name(g.p2_name) {
     }
 
     virtual Game & operator=(const Game & g) {
@@ -166,7 +172,7 @@ public:
         parent->redo();
     }
 
-    virtual void for_each_legal_move(std::function<void(Game &, GameMove &)> f) {
+    virtual void for_each_legal_move(std::function<bool(Game &, GameMove &)> f) {
         parent->for_each_legal_move(f);
     }
 

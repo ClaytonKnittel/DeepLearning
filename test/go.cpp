@@ -10,11 +10,20 @@
 
 #include <fun/print_colors.h>
 
+#include <alpha_beta_move.h>
 #include <file_move.h>
 #include <game_with_history.h>
 #include <game_with_info.h>
 #include <go.h>
 #include <user_move.h>
+
+
+//#define DO_CURSES
+
+
+#ifdef DO_CURSES
+#define printf printw
+#endif
 
 
 void print_w(const std::string & s, uint32_t w) {
@@ -51,14 +60,21 @@ void interleave_print(const Go & g) {
 
 void regular_print(const Game & g) {
     std::cout << g << std::endl;
-    printw("score: %d\n", g.get_score());
+    printf("score: %d\n", g.get_score());
 }
 
 int main(int argc, char * argv[]) {
 
-    Go game(19, 19);
-    GameWithHistory gh(&game);
-    GameWithInfo g(&gh);
+    std::shared_ptr<Go> game = std::make_shared<Go>(3, 3);
+    std::shared_ptr<GameWithHistory> gh =
+        std::make_shared<GameWithHistory>(game);
+
+#ifdef DO_CURSES
+    GameWithInfo g(gh);
+#else
+    Game & g = *gh;
+#endif
+    g.consistency_check();
 
     void(*print_fn)(const Game &) = regular_print;
 
@@ -67,8 +83,11 @@ int main(int argc, char * argv[]) {
     std::shared_ptr<MoveGen> move_gen = nullptr;
 
     int opt;
-    while ((opt = getopt(argc, argv, "f:")) != -1) {
+    while ((opt = getopt(argc, argv, "af:")) != -1) {
         switch(opt) {
+            case 'a':
+                move_gen = std::make_shared<AlphaBetaMove>(g, 1);
+                break;
             case 'f':
                 move_gen = std::make_shared<FileMove>(optarg, g);
                 break;
@@ -91,6 +110,8 @@ int main(int argc, char * argv[]) {
         }
         print = true;
         bool again = false, game_over = false, undoes = false;;
+
+        g.consistency_check();
 
         GoMove m;
         switch (move_gen->next_move(m)) {
@@ -125,7 +146,7 @@ int main(int argc, char * argv[]) {
         } catch (const std::runtime_error & e) {
             print_fn(g);
             attron(COLOR_PAIR(5));
-            printw("%s\n", e.what());
+            printf("%s\n", e.what());
             attroff(COLOR_PAIR(5));
             refresh();
             getch();
@@ -135,4 +156,8 @@ int main(int argc, char * argv[]) {
 
     return 0;
 }
+
+#ifdef DO_CURSES
+#undef printf
+#endif
 

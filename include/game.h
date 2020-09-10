@@ -22,6 +22,8 @@ class GameMove {
 public:
 
     virtual ~GameMove() = default;
+
+    virtual GameMove & operator=(GameMove & move) = 0;
 };
 
 
@@ -107,8 +109,10 @@ public:
     /*
      * iterates over legal moves in current game state, calling f with arguments
      * (game state reference, move)
+     *
+     * if f returns false, then iteration is terminated
      */
-    virtual void for_each_legal_move(std::function<void(Game &, GameMove &)> f) = 0;
+    virtual void for_each_legal_move(std::function<bool(Game &, GameMove &)> f) = 0;
 
 
     /*

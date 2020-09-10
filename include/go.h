@@ -17,7 +17,10 @@ enum Color {
     white = 0x2,
     // gray is for the borders, which are counted as both black and white
     gray  = 0x3,
-    num_states = 4
+    num_states = 4,
+
+    // not a legal color for tiles, only in the color field of GoMove
+    pass = 5
 };
 
 /*
@@ -32,6 +35,18 @@ class GoMove : public GameMove {
 public:
 
     virtual ~GoMove() = default;
+
+    GoMove & operator=(GoMove & move) {
+        color = move.color;
+        x = move.x;
+        y = move.y;
+        return *this;
+    }
+
+    virtual GameMove & operator=(GameMove & move) {
+        GoMove & m = dynamic_cast<GoMove &>(move);
+        return (*this = m);
+    }
 
     Color color;
     coord_t x, y;
@@ -57,6 +72,12 @@ public:
     static constexpr const char default_p2_name[] = "white";
 
 private:
+
+    // when last_move is this, that means the last move was a pass
+    static constexpr const board_idx_t one_pass = 0xffffu;
+    // when last_move is this, that means the last two moves were
+    // passes, and thus the game is over
+    static constexpr const board_idx_t two_passes = 0xfffeu;
 
     coord_t w, h;
 
@@ -361,7 +382,7 @@ public:
 
     virtual void redo();
 
-    virtual void for_each_legal_move(std::function<void(Game &, GameMove &)> f);
+    virtual void for_each_legal_move(std::function<bool(Game &, GameMove &)> f);
 
 
     // gives the width of the Go board when printed as unicode text

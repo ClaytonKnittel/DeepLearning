@@ -793,17 +793,6 @@ void Go::join_strings(uint32_t s1, uint32_t s2) {
 
     str1.size += str2.size;
 
-    last_tile = str1.first_tile;
-    printf("  (");
-    do {
-        printf("%s", idx_str(last_tile).c_str());
-        last_tile = tiles[last_tile].next_tile;
-        if (last_tile != str1.first_tile) {
-            printf(", ");
-        }
-    } while (last_tile != str1.first_tile);
-    printf(")\n");
-
     if (str1.liberties <= TileString::tracked_liberties &&
             str2.liberties <= TileString::tracked_liberties) {
         board_idx_t s1_buf[TileString::tracked_liberties];
@@ -1308,7 +1297,7 @@ Go::Go() : g_data(nullptr) {
 }
 
 
-Go::Go(coord_t w, coord_t h) : w(w), h(h), turn(0), last_move(-1),
+Go::Go(coord_t w, coord_t h) : w(w), h(h), turn(0), last_move(0),
         black_captures(0), white_captures(0) {
     // includes the borders
     this->n_tiles = (this->w + 2) * (this->h + 2);
@@ -1328,9 +1317,10 @@ Go::Go(const Go & g) : w(g.w), h(g.h), turn(g.turn), last_move(g.last_move),
         max_n_strings(g.max_n_strings), free_strings(g.free_strings),
         black_captures(g.black_captures), white_captures(g.white_captures) {
     this->g_data = malloc(g_data_size + Go::g_data_alignment);
-    __builtin_memcpy(this->g_data, g.g_data,
-            g_data_size + Go::g_data_alignment);
     this->__assign_memory();
+    __builtin_memcpy(this->tiles, g.tiles, n_tiles * sizeof(Tile));
+    __builtin_memcpy(this->strings, g.strings,
+            max_n_strings * sizeof(TileString));
 }
 
 
@@ -1364,9 +1354,10 @@ Go & Go::operator=(const Go & g) {
         free(g_data);
     }
     this->g_data = malloc(g_data_size + Go::g_data_alignment);
-    __builtin_memcpy(this->g_data, g.g_data,
-            g_data_size + Go::g_data_alignment);
     this->__assign_memory();
+    __builtin_memcpy(this->tiles, g.tiles, n_tiles * sizeof(Tile));
+    __builtin_memcpy(this->strings, g.strings,
+            max_n_strings * sizeof(TileString));
 
     return *this;
 }
@@ -1420,13 +1411,10 @@ std::shared_ptr<Game> Go::clone() const {
 
 
 bool Go::game_over() const {
-    return false;
+    return this->last_move == two_passes;
 }
 
 int Go::get_score() const {
-    constexpr const static uint8_t touch_black = (uint8_t) Color::black;
-    constexpr const static uint8_t touch_white = (uint8_t) Color::white;
-
     union_find uf;
     uf_init(&uf, (this->w + 2) * (this->h + 2));
 
@@ -1446,12 +1434,12 @@ int Go::get_score() const {
                 if (it1 != regs.end()) {
                     cnt = it1->second.first;
                     touching = it1->second.second;
+                    regs.erase(it1);
                 }
                 else {
                     cnt = 1;
                     touching = 0;
                 }
-                printw("%s -> %u ", idx_str(idx).c_str(), cnt);
                 board_idx_t n;
 
                 FOR_EACH_ADJ(idx, n, {
@@ -1480,12 +1468,19 @@ int Go::get_score() const {
         }
     }
 
+    int score = black_captures - white_captures;
+
     for (auto it = regs.begin(); it != regs.end(); it++) {
-        printw("%s -> (%u, %u)\n", idx_str(it->first).c_str(), it->second.first, it->second.second);
+        /*printw("%s -> (%u, %u)\n", idx_str(it->first).c_str(),
+                it->second.first, it->second.second);*/
+        uint16_t cnt = it->second.first;
+        uint8_t mask = it->second.second;
+        score += (mask == Color::black) ? cnt :
+            ((mask == Color::white) ? -cnt : 0);
     }
 
     uf_destroy(&uf);
-    return 0;
+    return score;
 }
 
 bool Go::max_player() const {
@@ -1502,18 +1497,31 @@ void Go::play(GameMove & m) {
     board_idx_t idx = to_idx(gm.x, gm.y);
 
     speak("Playing move at %s\n", idx_str(idx).c_str());
-    GO_ASSERT(!is_stone(idx), "%s is already occupied", idx_str(idx).c_str());
-    GO_ASSERT(!move_is_suicide(idx, gm.color), "move %s is suicidal",
-            idx_str(idx).c_str());
-    GO_ASSERT(gm.x < this->w && gm.y < this->h, "move is out of bounds");
-    GO_ASSERT((turn & 1) ? (gm.color == Color::white) : (gm.color == Color::black),
-            "tried playing %s on turn %u",
-            (gm.color == white ? "white" : gm.color == black ? "black" : "no color"),
-            this->turn);
+    GO_ASSERT(!game_over(), "the game is already over, cannot play "
+            "another move");
+    if (gm.color != pass) {
+        GO_ASSERT(!is_stone(idx), "%s is already occupied",
+                idx_str(idx).c_str());
+        GO_ASSERT(!move_is_suicide(idx, gm.color), "move %s is suicidal",
+                idx_str(idx).c_str());
+        GO_ASSERT(gm.x < this->w && gm.y < this->h, "move is out of bounds");
+        GO_ASSERT((turn & 1) ? (gm.color == Color::white) :
+                 (gm.color == Color::black),
+                "tried playing %s on turn %u",
+                (gm.color == white ? "white" :
+                 gm.color == black ? "black" : "no color"),
+                this->turn);
+    }
 
-    this->_do_play(idx, gm.color);
+    if (gm.color == pass) {
+        // pass
+        this->last_move = last_move == one_pass ? two_passes : one_pass;
+    }
+    else {
+        this->_do_play(idx, gm.color);
+        this->last_move = idx;
+    }
     this->turn++;
-    this->last_move = idx;
 }
 
 void Go::undo() {
@@ -1524,8 +1532,32 @@ void Go::redo() {
     GO_ASSERT(false, "redo not implemented");
 }
 
-void Go::for_each_legal_move(std::function<void(Game &, GameMove &)> f) {
+void Go::for_each_legal_move(std::function<bool(Game &, GameMove &)> f) {
+    GoMove m;
 
+    if (game_over()) {
+        // cannot play once the game has ended
+        return;
+    }
+
+    m.color = max_player() ? Color::black : Color::white;
+
+    for (coord_t y = 0; y < this->h; y++) {
+        for (coord_t x = 0; x < this->w; x++) {
+            board_idx_t idx = to_idx(x, y);
+            if (is_liberty(idx) && !move_is_suicide(idx, m.color)) {
+                m.x = x;
+                m.y = y;
+                if (!f(*this, m)) {
+                    return;
+                }
+            }
+        }
+    }
+
+    // pass
+    m.color = Color::pass;
+    f(*this, m);
 }
 
 

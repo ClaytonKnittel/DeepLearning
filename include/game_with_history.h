@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <vector>
 
 #include <game.h>
@@ -7,15 +8,20 @@
 class GameWithHistory : public Game {
 private:
 
-    Game * parent;
+    std::shared_ptr<Game> parent;
 
     size_t h_idx;
     std::vector<std::shared_ptr<Game>> history;
 
 public:
 
-    GameWithHistory(Game * parent) : parent(parent), h_idx(0) {
+    GameWithHistory(std::shared_ptr<Game> parent) : parent(parent),
+            h_idx(0) {
         history.push_back(parent->clone());
+    }
+
+    GameWithHistory(const GameWithHistory & g) : parent(g.parent->clone()), 
+            h_idx(g.h_idx), history(g.history) {
     }
 
     virtual Game & operator=(const Game & g) {
@@ -34,6 +40,7 @@ public:
 
     virtual void play(GameMove & m) {
         parent->play(m);
+        history.resize(h_idx + 1);
         h_idx++;
         history.push_back(parent->clone());
     }
@@ -66,7 +73,7 @@ public:
     }
 
     virtual std::shared_ptr<Game> clone() const {
-        return parent->clone();
+        return std::make_shared<GameWithHistory>(*this);
     }
 
     virtual bool game_over() const {
@@ -81,7 +88,7 @@ public:
         return parent->max_player();
     }
 
-    virtual void for_each_legal_move(std::function<void(Game &, GameMove &)> f) {
+    virtual void for_each_legal_move(std::function<bool(Game &, GameMove &)> f) {
         parent->for_each_legal_move(f);
     }
 
@@ -96,6 +103,9 @@ public:
     }
 
     virtual void consistency_check() const {
+        for (auto it = history.begin(); it != history.end(); it++) {
+            (*it)->consistency_check();
+        }
         parent->consistency_check();
     }
 
