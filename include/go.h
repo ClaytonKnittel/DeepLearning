@@ -57,33 +57,39 @@ public:
 class Go : public Game {
 public:
 
-    static constexpr const uint32_t tile_width = util::fls_unsafe(num_states - 1);
-    static constexpr const uint32_t tile_mask = ((1u) << tile_width) - 1;
+    static constexpr uint32_t tile_width = util::fls_unsafe(num_states - 1);
+    static constexpr uint32_t tile_mask = ((1u) << tile_width) - 1;
 
 
-    static constexpr const uint64_t g_data_alignment = 128;
+    static constexpr uint64_t g_data_alignment = 128;
 
-    static constexpr const char COL_INDICATORS[] = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
+    static constexpr char COL_INDICATORS[] = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
 
     // the width of a single tile when the board is printed as unicode text
-    static constexpr const uint32_t max_piece_print_width = 3;
+    static constexpr uint32_t max_piece_print_width = 3;
 
-    static constexpr const char default_p1_name[] = "black";
-    static constexpr const char default_p2_name[] = "white";
+    static constexpr char default_p1_name[] = "black";
+    static constexpr char default_p2_name[] = "white";
 
 private:
 
+    static constexpr board_idx_t no_position = 0xffffu;
+
     // when last_move is this, that means the last move was a pass
-    static constexpr const board_idx_t one_pass = 0xffffu;
+    static constexpr board_idx_t one_pass = 0xffffu;
     // when last_move is this, that means the last two moves were
     // passes, and thus the game is over
-    static constexpr const board_idx_t two_passes = 0xfffeu;
+    static constexpr board_idx_t two_passes = 0xfffeu;
 
     coord_t w, h;
 
     uint16_t turn;
 
     board_idx_t last_move;
+    // when set, marks the position on the board that cannot be played next,
+    // as it would result in the recapturing of a stone that had just captured
+    // a single stone
+    board_idx_t ko_move;
 
     size_t g_data_size;
     uint32_t n_tiles;
@@ -305,8 +311,10 @@ private:
     /*
      * places a tile at idx, assuming all 4 of idx's neighbors are not the same
      * color as the stone we are placing
+     *
+     * returns a reference to the created TileString for this tile
      */
-    void place_lone_tile(board_idx_t idx, Color color);
+    TileString & place_lone_tile(board_idx_t idx, Color color);
 
     /*
      * unsafe version of play, does not check the legality of the move,

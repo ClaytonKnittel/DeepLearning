@@ -1000,7 +1000,7 @@ bool Go::move_is_suicide(board_idx_t idx, Color color) const {
 }
 
 
-void Go::place_lone_tile(board_idx_t idx, Color color) {
+TileString & Go::place_lone_tile(board_idx_t idx, Color color) {
     speak("placing lone tile at %s\n", idx_str(idx).c_str());
 
     // need to allocate a new string for this tile
@@ -1034,6 +1034,8 @@ void Go::place_lone_tile(board_idx_t idx, Color color) {
     n_liberties += tiles[n].color() == Color::empty;
 
     s.liberties = n_liberties;
+
+    return s;
 }
 
 
@@ -1097,9 +1099,31 @@ void Go::_do_play(board_idx_t idx, Color color) {
         n_captures += strings[str_idx].size;
     }
 
+    board_idx_t new_ko_pos = no_position;
 
     if (n_string_joins == 0) {
-        place_lone_tile(idx, color);
+        TileString & s = place_lone_tile(idx, color);
+
+        // check to see if this generates a potential ko move by the other
+        // player (which can only happen if this is a lone tile)
+        if (s.liberties == 0) {
+            uint8_t o_neighbors = 0;
+            uint16_t ko_idx;
+            board_idx_t n;
+            FOR_EACH_ADJ(idx, n, {
+                if (tiles[n].color() == o) {
+                    TileString & os = strings[tiles[n].string_idx()];
+                    if (os.liberties == 1 && os.size == 1) {
+                        o_neighbors++;
+                        ko_idx = n;
+                    }
+                }
+            });
+            if (o_neighbors == 1) {
+                // we have found a ko space
+                new_ko_pos = ko_idx;
+            }
+        }
     }
     else if (n_string_joins == 1) {
         append_string(idx, color, first_string_idx);
@@ -1110,6 +1134,9 @@ void Go::_do_play(board_idx_t idx, Color color) {
     }
 
     subtract_liberties(idx, color);
+
+    // record the new ko position (if there was one)
+    ko_move = new_ko_pos;
 
     // add captures
     if (color == Color::black) {
@@ -1143,6 +1170,14 @@ void Go::_print(std::ostream & o, const std::string & p1_name,
 
     o << p1_name << " score: " << black_captures << "\n";
     o << p2_name << " score: " << white_captures << "\n";
+    o << "Ko position: ";
+    if (ko_move == no_position) {
+        o << "nowhere";
+    }
+    else {
+        o << ko_move;
+    }
+    o << "\n";
 
     uint32_t row_idc_width = util::log10(this->h);
 
@@ -1298,7 +1333,7 @@ Go::Go() : g_data(nullptr) {
 
 
 Go::Go(coord_t w, coord_t h) : w(w), h(h), turn(0), last_move(0),
-        black_captures(0), white_captures(0) {
+        ko_move(no_position), black_captures(0), white_captures(0) {
     // includes the borders
     this->n_tiles = (this->w + 2) * (this->h + 2);
     this->max_n_strings = this->calc_max_n_strings();
@@ -1313,7 +1348,7 @@ Go::Go(coord_t w, coord_t h) : w(w), h(h), turn(0), last_move(0),
 
 
 Go::Go(const Go & g) : w(g.w), h(g.h), turn(g.turn), last_move(g.last_move),
-        g_data_size(g.g_data_size), n_tiles(g.n_tiles),
+        ko_move(g.ko_move), g_data_size(g.g_data_size), n_tiles(g.n_tiles),
         max_n_strings(g.max_n_strings), free_strings(g.free_strings),
         black_captures(g.black_captures), white_captures(g.white_captures) {
     this->g_data = malloc(g_data_size + Go::g_data_alignment);
@@ -1325,7 +1360,7 @@ Go::Go(const Go & g) : w(g.w), h(g.h), turn(g.turn), last_move(g.last_move),
 
 
 Go::Go(Go && g) : w(g.w), h(g.h), turn(g.turn), last_move(g.last_move),
-        g_data_size(g.g_data_size), n_tiles(g.n_tiles),
+        ko_move(g.ko_move), g_data_size(g.g_data_size), n_tiles(g.n_tiles),
         max_n_strings(g.max_n_strings), free_strings(g.free_strings),
         black_captures(g.black_captures), white_captures(g.white_captures) {
 
@@ -1343,6 +1378,7 @@ Go & Go::operator=(const Go & g) {
     h = g.h;
     turn = g.turn;
     last_move = g.last_move;
+    ko_move = g.ko_move;
     g_data_size = g.g_data_size;
     n_tiles = g.n_tiles;
     max_n_strings = g.max_n_strings;
@@ -1372,6 +1408,7 @@ Go & Go::operator=(Go && g) {
     h = g.h;
     turn = g.turn;
     last_move = g.last_move;
+    ko_move = g.ko_move;
     g_data_size = g.g_data_size;
     n_tiles = g.n_tiles;
     max_n_strings = g.max_n_strings;
@@ -1511,6 +1548,8 @@ void Go::play(GameMove & m) {
                 (gm.color == white ? "white" :
                  gm.color == black ? "black" : "no color"),
                 this->turn);
+        GO_ASSERT(idx != ko_move, "illegal ko move at %s",
+                idx_str(idx).c_str());
     }
 
     if (gm.color == pass) {
@@ -1542,10 +1581,13 @@ void Go::for_each_legal_move(std::function<bool(Game &, GameMove &)> f) {
 
     m.color = max_player() ? Color::black : Color::white;
 
-    for (coord_t y = 0; y < this->h; y++) {
-        for (coord_t x = 0; x < this->w; x++) {
+    coord_t w = this->w;
+    coord_t h = this->h;
+    for (coord_t y = 0; y < h; y++) {
+        for (coord_t x = 0; x < w; x++) {
             board_idx_t idx = to_idx(x, y);
-            if (is_liberty(idx) && !move_is_suicide(idx, m.color)) {
+            if (is_liberty(idx) && !move_is_suicide(idx, m.color) &&
+                    idx != this->ko_move) {
                 m.x = x;
                 m.y = y;
                 if (!f(*this, m)) {

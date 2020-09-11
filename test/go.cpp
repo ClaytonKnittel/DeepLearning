@@ -18,9 +18,6 @@
 #include <user_move.h>
 
 
-//#define DO_CURSES
-
-
 #ifdef DO_CURSES
 #define printf printw
 #endif
@@ -65,7 +62,7 @@ void regular_print(const Game & g) {
 
 int main(int argc, char * argv[]) {
 
-    std::shared_ptr<Go> game = std::make_shared<Go>(3, 3);
+    std::shared_ptr<Go> game = std::make_shared<Go>(4, 4);
     std::shared_ptr<GameWithHistory> gh =
         std::make_shared<GameWithHistory>(game);
 
@@ -86,7 +83,7 @@ int main(int argc, char * argv[]) {
     while ((opt = getopt(argc, argv, "af:")) != -1) {
         switch(opt) {
             case 'a':
-                move_gen = std::make_shared<AlphaBetaMove>(g, 13);
+                move_gen = std::make_shared<AlphaBetaMove>(g, 11);
                 break;
             case 'f':
                 move_gen = std::make_shared<FileMove>(optarg, g);

@@ -9,6 +9,7 @@
 MoveStatus UserMove::next_move(GameMove & move) {
     std::string buf;
 
+#ifdef DO_CURSES
     char ch;
     while ((ch = getch()) != '\n') {
         if (ch == 127) {
@@ -26,9 +27,23 @@ MoveStatus UserMove::next_move(GameMove & move) {
             printw("%c", ch);
         }
     }
+#else
+    getline(std::cin, buf);
+#endif /* DO_CURSES */
 
-    if (buf == "quit" || buf == "q" || buf == "exit") {
+    if (
+#ifndef DO_CURSES
+            !std::cin ||
+#endif
+            buf == "quit" || buf == "q" || buf == "exit") {
         return failed;
+    }
+
+    GoMove & m = dynamic_cast<GoMove &>(move);
+
+    if (buf == "p" || buf == "pass") {
+        m.color = Color::pass;
+        return ok;
     }
 
     int r;
@@ -38,7 +53,6 @@ MoveStatus UserMove::next_move(GameMove & move) {
         return retry;
     }
 
-    GoMove & m = dynamic_cast<GoMove &>(move);
     m.color = (game.get_turn() & 1) ? Color::white : Color::black;
     m.x = c_let - 'A' - (c_let > 'I');
     m.y = game.height() - r;

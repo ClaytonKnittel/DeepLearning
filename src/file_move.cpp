@@ -71,14 +71,17 @@ FileMove::FileMove(const std::string & file_name, Game & game) :
 
 
 MoveStatus FileMove::next_move(GameMove & move) {
-    char ch = getch();
     GoMove & gm = dynamic_cast<GoMove &>(move);
+#ifdef DO_CURSES
+    char ch = getch();
     if (ch == 'n') {
+#endif /* DO_CURSES */
         if (game.get_turn() >= moves.size()) {
             return retry;
         }
         gm = moves[game.get_turn()];
         return ok;
+#ifdef DO_CURSES
     }
     else if (ch == 'm') {
         return undo;
@@ -89,5 +92,6 @@ MoveStatus FileMove::next_move(GameMove & move) {
     else {
         return retry;
     }
+#endif /* DO_CURSES */
 }
 

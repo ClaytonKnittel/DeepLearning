@@ -5,9 +5,10 @@
 #include <game_with_info.h>
 
 
-int AlphaBetaMove::move_search(Game & g, int alpha, int beta, int depth, GameMove * move) {
+int AlphaBetaMove::move_search(Game & g, int alpha, int beta, int depth, GameMove * move, uint64_t & cnt) {
     if (depth == 0 || g.game_over()) {
         // we have reached the limits of our search
+        cnt++;
         return g.get_score();
     }
 
@@ -20,7 +21,7 @@ int AlphaBetaMove::move_search(Game & g, int alpha, int beta, int depth, GameMov
     g.for_each_legal_move([&](Game &, GameMove & m) -> bool {
         g.play(m);
 
-        int res = move_search(g, -beta, -alpha, depth - 1, nullptr);
+        int res = move_search(g, -beta, -alpha, depth - 1, nullptr, cnt);
 
         // res = -res if min_player
         res = (res ^ res_mask) + min_player;
@@ -57,8 +58,10 @@ MoveStatus AlphaBetaMove::next_move(GameMove & move) {
     game.consistency_check();
     game_clone->consistency_check();
 
-    move_search(*game_clone, min_int, max_int, max_depth, &move);
+    uint64_t cnt = 0;
+    move_search(*game_clone, min_int, max_int, max_depth, &move, cnt);
 
+    printf("Explored %llu game states\n", cnt);
     game_clone->consistency_check();
 
     GoMove mv = dynamic_cast<GoMove &>(move);

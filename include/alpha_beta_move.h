@@ -19,7 +19,7 @@ private:
 
 
     static int move_search(Game & g, int alpha, int beta, int depth,
-            GameMove * move);
+            GameMove * move, uint64_t & cnt);
 
 public:
 
