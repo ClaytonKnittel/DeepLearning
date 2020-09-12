@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -111,6 +112,10 @@ public:
 
     virtual ~GameWithInfo() {
         endwin();
+    }
+
+    virtual Game & strip() {
+        return parent->strip();
     }
 
     void set_p1_name(const std::string & name) {

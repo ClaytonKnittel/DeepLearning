@@ -34,6 +34,11 @@ public:
 
     virtual ~GameWithHistory() {}
 
+    virtual Game & strip() {
+        return parent->strip();
+    }
+
+
     virtual bool is_current() const {
         return h_idx + 1 == history.size();
     }

@@ -53,6 +53,9 @@ MoveStatus AlphaBetaMove::next_move(GameMove & move) {
     }
     game.consistency_check();
 
+    GameState state(dynamic_cast<Go &>(game.strip()));
+    state.print();
+
     std::shared_ptr<Game> game_clone = game.clone();
 
     game.consistency_check();

@@ -22,23 +22,19 @@ DEPFILES=$(SRC:$(SDIR)/%.cpp=$(ODIR)/%.d)
 
 
 .PHONY: all
-all: cppflow utils $(SLIB) tests
-
-.PHONY: cppflow
-cppflow:
-	(make -C $(CPPFLOW_DIR) BASE_DIR=$(BASE_DIR) LIB_DIR=$(LIB_DIR))
+all: utils $(SLIB) tests
 
 .PHONY: utils
 utils:
 	(make -C $(UTIL_DIR))
 
 .PHONY: tests
-tests:
+tests: utils $(SLIB)
 	(make -C $(TEST_DIR) BASE_DIR=$(BASE_DIR) SLIB=$(SLIB) LIBUTIL=$(SLIB))
 
 
-$(SLIB): $(OBJ)
-	$(AR) -rcs $@ $^
+$(SLIB): $(OBJ) utils
+	$(AR) -rcs $@ $(OBJ)
 
 
 $(ODIR)/%.o: $(SDIR)/%.cpp

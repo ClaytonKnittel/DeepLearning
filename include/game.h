@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <functional>
 #include <memory>
 
@@ -46,6 +47,10 @@ public:
      * move assignment
      */
     virtual Game & operator=(Game && g) = 0;
+
+
+    // strips away all decorators
+    virtual Game & strip() = 0;
 
 
     /*

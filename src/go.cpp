@@ -888,13 +888,6 @@ void Go::clear() {
 }
 
 
-Color Go::tile_at(coord_t x, coord_t y) const {
-    board_idx_t idx = to_idx(x, y);
-    const Tile & t = tiles[idx];
-    return t.color();
-}
-
-
 const char * Go::tile_repr_at(coord_t x, coord_t y) const {
     const static char black_str[] = P_BLACK "\u25CF" P_DEFAULT;
     const static char white_str[] = P_WHITE "\u25CF" P_DEFAULT;
@@ -1439,6 +1432,13 @@ Go::~Go() {
     if (g_data) {
         free(g_data);
     }
+}
+
+
+Color Go::tile_at(coord_t x, coord_t y) const {
+    board_idx_t idx = to_idx(x, y);
+    const Tile & t = tiles[idx];
+    return t.color();
 }
 
 

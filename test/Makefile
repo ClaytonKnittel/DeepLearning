@@ -18,7 +18,7 @@ DEPFILES=$(SRC:%.cpp=$(ODIR)/%.d)
 all: $(EXE)
 
 $(BIN_DIR)/%: $(ODIR)/%.o $(LIBUTIL)
-	$(CC) $(CFLAGS) $< -o $@ $(IFLAGS) $(LDFLAGS) -lgame
+	$(CC) $(CFLAGS) $< -o $@ $(IFLAGS) -lgame $(LDFLAGS)
 
 $(ODIR)/%.o: %.cpp
 	$(CC) $(CFLAGS) $< -c -o $@ $(IFLAGS)

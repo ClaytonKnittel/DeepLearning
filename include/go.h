@@ -288,11 +288,6 @@ private:
     void clear();
 
     /*
-     * returns tile at given coordinates
-     */
-    Color tile_at(coord_t x, coord_t y) const;
-
-    /*
      * returns string representation of tile at given coordinates
      */
     const char * tile_repr_at(coord_t x, coord_t y) const;
@@ -373,6 +368,15 @@ public:
         return turn;
     }
 
+    /*
+     * returns tile at given coordinates
+     */
+    Color tile_at(coord_t x, coord_t y) const;
+
+
+    virtual Game & strip() {
+        return *this;
+    }
 
     virtual std::shared_ptr<Game> clone() const;
 
