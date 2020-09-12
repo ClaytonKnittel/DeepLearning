@@ -1,0 +1,519 @@
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  us/call  us/call  name    
+ 32.65      1.92     1.92  1286101     1.49     2.12  Go::get_score() const
+  9.01      2.45     0.53 10198537     0.05     0.05  std::_Hashtable<unsigned long long, std::pair<unsigned long long const, std::pair<unsigned short, unsigned char> >, std::allocator<std::pair<unsigned long long const, std::pair<unsigned short, unsigned char> > >, std::__detail::_Select1st, std::equal_to<unsigned long long>, std::hash<unsigned long long>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::_M_insert_unique_node(unsigned int, unsigned int, std::__detail::_Hash_node<std::pair<unsigned long long const, std::pair<unsigned short, unsigned char> >, false>*, unsigned int)
+  8.67      2.96     0.51                             uf_find
+  5.95      3.31     0.35                             uf_union
+  4.93      3.60     0.29   387165     0.75     0.75  Go::for_each_legal_move(std::function<bool (Game&, GameMove&)>)
+  4.76      3.88     0.28  6697252     0.04     0.04  std::_Hashtable<unsigned long long, std::pair<unsigned long long const, std::pair<unsigned short, unsigned char> >, std::allocator<std::pair<unsigned long long const, std::pair<unsigned short, unsigned char> > >, std::__detail::_Select1st, std::equal_to<unsigned long long>, std::hash<unsigned long long>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::erase(std::__detail::_Node_const_iterator<std::pair<unsigned long long const, std::pair<unsigned short, unsigned char> >, false, false>)
+  3.91      4.11     0.23  1572443     0.15     0.41  Go::_do_play(unsigned short, Color)
+  3.57      4.32     0.21  1673209     0.13     0.75  GameWithHistory::play(GameMove&)
+  3.40      4.52     0.20                             uf_init
+  3.23      4.71     0.19  1673209     0.11     0.91  std::_Function_handler<bool (Game&, GameMove&), AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&)::{lambda(Game&, GameMove&)#1}>::_M_invoke(std::_Any_data const&, Game&, GameMove&)
+  2.89      4.88     0.17  1673237     0.10     0.53  Go::play(GameMove&)
+  2.72      5.04     0.16  1572443     0.10     0.11  Go::subtract_liberties(unsigned short, Color)
+  2.04      5.16     0.12   900537     0.13     0.20  Go::append_string(unsigned short, Color, unsigned int)
+  1.36      5.24     0.08  1673209     0.05     0.05  Go::operator=(Game&&)
+  1.19      5.31     0.07  1673237     0.04     1.72  AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&)
+  1.19      5.38     0.07  1572443     0.04     0.04  Go::move_is_suicide(unsigned short, Color) const
+  1.19      5.45     0.07  1161495     0.06     0.06  std::_Function_base::_Base_manager<AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&)::{lambda(Game&, GameMove&)#1}>::_M_manager(std::_Any_data&, std::_Function_base::_Base_manager<AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&)::{lambda(Game&, GameMove&)#1}> const&, std::_Manager_operation)
+  1.19      5.52     0.07  1097578     0.06     0.06  Go::liberty_list_merge(unsigned short*, unsigned int, unsigned short*, unsigned int, unsigned short*, unsigned int)
+  0.85      5.57     0.05  1673267     0.03     0.03  Go::~Go()
+  0.85      5.62     0.05  1673266     0.03     0.03  Go::Go(Go const&)
+  0.85      5.67     0.05  1286101     0.04     0.04  GameWithHistory::get_score() const
+  0.68      5.71     0.04  1673265     0.02     0.05  Go::clone() const
+  0.68      5.75     0.04   387165     0.10     0.22  GameWithHistory::for_each_legal_move(std::function<bool (Game&, GameMove&)>)
+  0.51      5.78     0.03   671906     0.04     0.04  Go::place_lone_tile(unsigned short, Color)
+  0.34      5.80     0.02  1673267     0.01     0.01  std::_Sp_counted_ptr_inplace<Go, std::allocator<Go>, (__gnu_cxx::_Lock_policy)1>::_M_dispose()
+  0.34      5.82     0.02     2298     8.70    13.05  Go::consistency_check() const
+  0.17      5.83     0.01  1673209     0.01     0.01  GameWithHistory::undo()
+  0.17      5.84     0.01   387165     0.03     0.03  GameWithHistory::max_player() const
+  0.17      5.85     0.01   197044     0.05     0.11  Go::join_strings(unsigned int, unsigned int)
+  0.17      5.86     0.01   183334     0.05     0.18  Go::merge_strings_around(unsigned short, Color, unsigned int)
+  0.17      5.87     0.01   130876     0.08     0.08  Go::erase_string(unsigned int)
+  0.17      5.88     0.01    26634     0.38     0.38  std::pair<std::_Rb_tree_iterator<unsigned int>, bool> std::_Rb_tree<unsigned int, unsigned int, std::_Identity<unsigned int>, std::less<unsigned int>, std::allocator<unsigned int> >::_M_insert_unique<unsigned int const&>(unsigned int const&)
+  0.00      5.88     0.00  1673266     0.00     0.00  std::_Sp_counted_ptr_inplace<Go, std::allocator<Go>, (__gnu_cxx::_Lock_policy)1>::_M_destroy()
+  0.00      5.88     0.00   387474     0.00     0.00  GameWithHistory::game_over() const
+  0.00      5.88     0.00   387474     0.00     0.00  Go::game_over() const
+  0.00      5.88     0.00   387165     0.00     0.00  Go::max_player() const
+  0.00      5.88     0.00    44287     0.00     0.00  std::pair<std::_Rb_tree_iterator<unsigned short>, bool> std::_Rb_tree<unsigned short, unsigned short, std::_Identity<unsigned short>, std::less<unsigned short>, std::allocator<unsigned short> >::_M_insert_unique<unsigned short const&>(unsigned short const&)
+  0.00      5.88     0.00    19298     0.00     0.00  std::_Rb_tree<unsigned short, unsigned short, std::_Identity<unsigned short>, std::less<unsigned short>, std::allocator<unsigned short> >::_M_erase(std::_Rb_tree_node<unsigned short>*)
+  0.00      5.88     0.00     2791     0.00     0.00  std::_Rb_tree<unsigned int, std::pair<unsigned int const, unsigned short>, std::_Select1st<std::pair<unsigned int const, unsigned short> >, std::less<unsigned int>, std::allocator<std::pair<unsigned int const, unsigned short> > >::_M_erase(std::_Rb_tree_node<std::pair<unsigned int const, unsigned short> >*)
+  0.00      5.88     0.00     2791     0.00     0.00  std::_Rb_tree<unsigned int, unsigned int, std::_Identity<unsigned int>, std::less<unsigned int>, std::allocator<unsigned int> >::_M_erase(std::_Rb_tree_node<unsigned int>*)
+  0.00      5.88     0.00      510     0.00     0.00  Go::recompute_string(unsigned int)
+  0.00      5.88     0.00      510     0.00     0.00  void util::const_sort<unsigned short, 8u>(unsigned short*)
+  0.00      5.88     0.00      510     0.00     0.00  void util::__bitonic_sort8<unsigned short>(unsigned short*)
+  0.00      5.88     0.00      448     0.00     0.00  Go::tile_at(unsigned char, unsigned char) const
+  0.00      5.88     0.00      188     0.00     0.00  Go::is_star_tile(unsigned char, unsigned char) const
+  0.00      5.88     0.00      112     0.00   254.80  GameWithHistory::consistency_check() const
+  0.00      5.88     0.00       41     0.00     0.00  void std::vector<std::shared_ptr<Game>, std::allocator<std::shared_ptr<Game> > >::_M_realloc_insert<std::shared_ptr<Game> >(__gnu_cxx::__normal_iterator<std::shared_ptr<Game>*, std::vector<std::shared_ptr<Game>, std::allocator<std::shared_ptr<Game> > > >, std::shared_ptr<Game>&&)
+  0.00      5.88     0.00       29     0.00     0.00  GameWithHistory::print(std::ostream&) const
+  0.00      5.88     0.00       29     0.00     0.00  Go::print(std::ostream&) const
+  0.00      5.88     0.00       29     0.00     0.00  Go::_print(std::ostream&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) const
+  0.00      5.88     0.00       29     0.00     0.27  std::_Sp_counted_ptr_inplace<GameWithHistory, std::allocator<GameWithHistory>, (__gnu_cxx::_Lock_policy)1>::_M_dispose()
+  0.00      5.88     0.00       28     0.00     0.00  GameWithHistory::strip()
+  0.00      5.88     0.00       28     0.00     0.00  Go::strip()
+  0.00      5.88     0.00       28     0.00     0.05  GameWithHistory::clone() const
+  0.00      5.88     0.00       28     0.00     0.00  std::_Sp_counted_ptr_inplace<GameWithHistory, std::allocator<GameWithHistory>, (__gnu_cxx::_Lock_policy)1>::_M_destroy()
+  0.00      5.88     0.00       28     0.00     0.00  std::_Sp_counted_ptr_inplace<GameWithHistory, std::allocator<GameWithHistory>, (__gnu_cxx::_Lock_policy)1>::_M_get_deleter(std::type_info const&)
+  0.00      5.88     0.00        1     0.00     0.00  _GLOBAL__sub_I__Z7print_wRKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEj
+  0.00      5.88     0.00        1     0.00     0.00  _GLOBAL__sub_I__ZN13AlphaBetaMove11move_searchER4GameiiiP8GameMoveRy
+  0.00      5.88     0.00        1     0.00     0.00  _GLOBAL__sub_I__ZN8FileMove10find_movesERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE
+  0.00      5.88     0.00        1     0.00     0.00  _GLOBAL__sub_I__ZN8UserMove9next_moveER8GameMove
+  0.00      5.88     0.00        1     0.00     0.00  _GLOBAL__sub_I__ZNK2Go6to_idxEhh
+  0.00      5.88     0.00        1     0.00     0.00  Go::clear()
+  0.00      5.88     0.00        1     0.00     0.00  std::_Sp_counted_ptr_inplace<AlphaBetaMove, std::allocator<AlphaBetaMove>, (__gnu_cxx::_Lock_policy)1>::_M_dispose()
+
+ %         the percentage of the total running time of the
+time       program used by this function.
+
+cumulative a running sum of the number of seconds accounted
+ seconds   for by this function and those listed above it.
+
+ self      the number of seconds accounted for by this
+seconds    function alone.  This is the major sort for this
+           listing.
+
+calls      the number of times this function was invoked, if
+           this function is profiled, else blank.
+
+ self      the average number of milliseconds spent in this
+ms/call    function per call, if this function is profiled,
+	   else blank.
+
+ total     the average number of milliseconds spent in this
+ms/call    function and its descendents per call, if this
+	   function is profiled, else blank.
+
+name       the name of the function.  This is the minor sort
+           for this listing. The index shows the location of
+	   the function in the gprof listing. If the index is
+	   in parenthesis it shows where it would appear in
+	   the gprof listing if it were to be printed.
+
+Copyright (C) 2012-2017 Free Software Foundation, Inc.
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 4 byte(s) for 0.17% of 5.88 seconds
+
+index % time    self  children    called     name
+                                                 <spontaneous>
+[1]     82.0    0.00    4.82                 AlphaBetaMove::next_move(GameMove&) [1]
+                0.59    4.20      28/28          AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&) <cycle 1> [3]
+                0.00    0.03     112/112         GameWithHistory::consistency_check() const [29]
+                0.00    0.00     112/2298        Go::consistency_check() const [28]
+                0.00    0.00      28/29          std::_Sp_counted_ptr_inplace<GameWithHistory, std::allocator<GameWithHistory>, (__gnu_cxx::_Lock_policy)1>::_M_dispose() [37]
+                0.00    0.00      28/28          GameWithHistory::clone() const [38]
+                0.00    0.00     448/448         Go::tile_at(unsigned char, unsigned char) const [62]
+                0.00    0.00      29/387474      Go::game_over() const [53]
+                0.00    0.00      29/387474      GameWithHistory::game_over() const [52]
+                0.00    0.00      28/28          Go::strip() [69]
+                0.00    0.00      28/28          GameWithHistory::strip() [68]
+                0.00    0.00      28/28          std::_Sp_counted_ptr_inplace<GameWithHistory, std::allocator<GameWithHistory>, (__gnu_cxx::_Lock_policy)1>::_M_destroy() [70]
+                0.00    0.00      28/1673266     std::_Sp_counted_ptr_inplace<Go, std::allocator<Go>, (__gnu_cxx::_Lock_policy)1>::_M_destroy() [51]
+-----------------------------------------------
+[2]     81.5    0.59    4.20      28+4120748 <cycle 1 as a whole> [2]
+                0.07    2.81 1673237             AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&) <cycle 1> [3]
+                0.19    1.34 1673209             std::_Function_handler<bool (Game&, GameMove&), AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&)::{lambda(Game&, GameMove&)#1}>::_M_invoke(std::_Any_data const&, Game&, GameMove&) <cycle 1> [5]
+                0.29    0.00  387165             Go::for_each_legal_move(std::function<bool (Game&, GameMove&)>) <cycle 1> [12]
+                0.04    0.05  387165             GameWithHistory::for_each_legal_move(std::function<bool (Game&, GameMove&)>) <cycle 1> [18]
+-----------------------------------------------
+                             1673209             std::_Function_handler<bool (Game&, GameMove&), AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&)::{lambda(Game&, GameMove&)#1}>::_M_invoke(std::_Any_data const&, Game&, GameMove&) <cycle 1> [5]
+                0.59    4.20      28/28          AlphaBetaMove::next_move(GameMove&) [1]
+[3]     49.0    0.07    2.81 1673237         AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&) <cycle 1> [3]
+                1.92    0.81 1286072/1286101     Go::get_score() const [4]
+                0.05    0.00 1286072/1286101     GameWithHistory::get_score() const [25]
+                0.02    0.00  387165/1161495     std::_Function_base::_Base_manager<AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&)::{lambda(Game&, GameMove&)#1}>::_M_manager(std::_Any_data&, std::_Function_base::_Base_manager<AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&)::{lambda(Game&, GameMove&)#1}> const&, std::_Manager_operation) [21]
+                0.01    0.00  387165/387165      GameWithHistory::max_player() const [33]
+                0.00    0.00  387445/387474      Go::game_over() const [53]
+                0.00    0.00  387445/387474      GameWithHistory::game_over() const [52]
+                0.00    0.00  387165/387165      Go::max_player() const [54]
+                              387165             GameWithHistory::for_each_legal_move(std::function<bool (Game&, GameMove&)>) <cycle 1> [18]
+-----------------------------------------------
+                0.00    0.00      29/1286101     regular_print(Game const&) [36]
+                1.92    0.81 1286072/1286101     AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&) <cycle 1> [3]
+[4]     46.4    1.92    0.81 1286101         Go::get_score() const [4]
+                0.53    0.00 10198537/10198537     std::_Hashtable<unsigned long long, std::pair<unsigned long long const, std::pair<unsigned short, unsigned char> >, std::allocator<std::pair<unsigned long long const, std::pair<unsigned short, unsigned char> > >, std::__detail::_Select1st, std::equal_to<unsigned long long>, std::hash<unsigned long long>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::_M_insert_unique_node(unsigned int, unsigned int, std::__detail::_Hash_node<std::pair<unsigned long long const, std::pair<unsigned short, unsigned char> >, false>*, unsigned int) [9]
+                0.28    0.00 6697252/6697252     std::_Hashtable<unsigned long long, std::pair<unsigned long long const, std::pair<unsigned short, unsigned char> >, std::allocator<std::pair<unsigned long long const, std::pair<unsigned short, unsigned char> > >, std::__detail::_Select1st, std::equal_to<unsigned long long>, std::hash<unsigned long long>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::erase(std::__detail::_Node_const_iterator<std::pair<unsigned long long const, std::pair<unsigned short, unsigned char> >, false, false>) [13]
+-----------------------------------------------
+                             1673209             Go::for_each_legal_move(std::function<bool (Game&, GameMove&)>) <cycle 1> [12]
+[5]     26.0    0.19    1.34 1673209         std::_Function_handler<bool (Game&, GameMove&), AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&)::{lambda(Game&, GameMove&)#1}>::_M_invoke(std::_Any_data const&, Game&, GameMove&) <cycle 1> [5]
+                0.21    1.04 1673209/1673209     GameWithHistory::play(GameMove&) [6]
+                0.08    0.00 1673209/1673209     Go::operator=(Game&&) [19]
+                0.01    0.00 1673209/1673209     GameWithHistory::undo() [32]
+                             1673209             AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&) <cycle 1> [3]
+-----------------------------------------------
+                0.21    1.04 1673209/1673209     std::_Function_handler<bool (Game&, GameMove&), AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&)::{lambda(Game&, GameMove&)#1}>::_M_invoke(std::_Any_data const&, Game&, GameMove&) <cycle 1> [5]
+[6]     21.3    0.21    1.04 1673209         GameWithHistory::play(GameMove&) [6]
+                0.17    0.71 1673237/1673237     Go::play(GameMove&) [7]
+                0.04    0.05 1673237/1673265     Go::clone() const [17]
+                0.05    0.00 1673082/1673267     Go::~Go() [23]
+                0.02    0.00 1673082/1673267     std::_Sp_counted_ptr_inplace<Go, std::allocator<Go>, (__gnu_cxx::_Lock_policy)1>::_M_dispose() [31]
+                0.00    0.00 1673082/1673266     std::_Sp_counted_ptr_inplace<Go, std::allocator<Go>, (__gnu_cxx::_Lock_policy)1>::_M_destroy() [51]
+                0.00    0.00      41/41          void std::vector<std::shared_ptr<Game>, std::allocator<std::shared_ptr<Game> > >::_M_realloc_insert<std::shared_ptr<Game> >(__gnu_cxx::__normal_iterator<std::shared_ptr<Game>*, std::vector<std::shared_ptr<Game>, std::allocator<std::shared_ptr<Game> > > >, std::shared_ptr<Game>&&) [64]
+-----------------------------------------------
+                0.17    0.71 1673237/1673237     GameWithHistory::play(GameMove&) [6]
+[7]     15.0    0.17    0.71 1673237         Go::play(GameMove&) [7]
+                0.23    0.41 1572443/1572443     Go::_do_play(unsigned short, Color) [8]
+                0.07    0.00 1572443/1572443     Go::move_is_suicide(unsigned short, Color) const [20]
+-----------------------------------------------
+                0.23    0.41 1572443/1572443     Go::play(GameMove&) [7]
+[8]     10.9    0.23    0.41 1572443         Go::_do_play(unsigned short, Color) [8]
+                0.12    0.06  900537/900537      Go::append_string(unsigned short, Color, unsigned int) [15]
+                0.16    0.01 1572443/1572443     Go::subtract_liberties(unsigned short, Color) [16]
+                0.01    0.02  183334/183334      Go::merge_strings_around(unsigned short, Color, unsigned int) [26]
+                0.03    0.00  671906/671906      Go::place_lone_tile(unsigned short, Color) [27]
+                0.00    0.00   14583/130876      Go::erase_string(unsigned int) [34]
+-----------------------------------------------
+                0.53    0.00 10198537/10198537     Go::get_score() const [4]
+[9]      9.0    0.53    0.00 10198537         std::_Hashtable<unsigned long long, std::pair<unsigned long long const, std::pair<unsigned short, unsigned char> >, std::allocator<std::pair<unsigned long long const, std::pair<unsigned short, unsigned char> > >, std::__detail::_Select1st, std::equal_to<unsigned long long>, std::hash<unsigned long long>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::_M_insert_unique_node(unsigned int, unsigned int, std::__detail::_Hash_node<std::pair<unsigned long long const, std::pair<unsigned short, unsigned char> >, false>*, unsigned int) [9]
+-----------------------------------------------
+                                                 <spontaneous>
+[10]     8.7    0.51    0.00                 uf_find [10]
+-----------------------------------------------
+                                                 <spontaneous>
+[11]     6.0    0.35    0.00                 uf_union [11]
+-----------------------------------------------
+                              387165             GameWithHistory::for_each_legal_move(std::function<bool (Game&, GameMove&)>) <cycle 1> [18]
+[12]     4.9    0.29    0.00  387165         Go::for_each_legal_move(std::function<bool (Game&, GameMove&)>) <cycle 1> [12]
+                             1673209             std::_Function_handler<bool (Game&, GameMove&), AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&)::{lambda(Game&, GameMove&)#1}>::_M_invoke(std::_Any_data const&, Game&, GameMove&) <cycle 1> [5]
+-----------------------------------------------
+                0.28    0.00 6697252/6697252     Go::get_score() const [4]
+[13]     4.8    0.28    0.00 6697252         std::_Hashtable<unsigned long long, std::pair<unsigned long long const, std::pair<unsigned short, unsigned char> >, std::allocator<std::pair<unsigned long long const, std::pair<unsigned short, unsigned char> > >, std::__detail::_Select1st, std::equal_to<unsigned long long>, std::hash<unsigned long long>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::erase(std::__detail::_Node_const_iterator<std::pair<unsigned long long const, std::pair<unsigned short, unsigned char> >, false, false>) [13]
+-----------------------------------------------
+                                                 <spontaneous>
+[14]     3.4    0.20    0.00                 uf_init [14]
+-----------------------------------------------
+                0.12    0.06  900537/900537      Go::_do_play(unsigned short, Color) [8]
+[15]     3.0    0.12    0.06  900537         Go::append_string(unsigned short, Color, unsigned int) [15]
+                0.06    0.00  900534/1097578     Go::liberty_list_merge(unsigned short*, unsigned int, unsigned short*, unsigned int, unsigned short*, unsigned int) [22]
+-----------------------------------------------
+                0.16    0.01 1572443/1572443     Go::_do_play(unsigned short, Color) [8]
+[16]     2.9    0.16    0.01 1572443         Go::subtract_liberties(unsigned short, Color) [16]
+                0.01    0.00  116293/130876      Go::erase_string(unsigned int) [34]
+                0.00    0.00     510/510         Go::recompute_string(unsigned int) [59]
+-----------------------------------------------
+                0.00    0.00      28/1673265     GameWithHistory::clone() const [38]
+                0.04    0.05 1673237/1673265     GameWithHistory::play(GameMove&) [6]
+[17]     1.5    0.04    0.05 1673265         Go::clone() const [17]
+                0.05    0.00 1673266/1673266     Go::Go(Go const&) [24]
+-----------------------------------------------
+                              387165             AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&) <cycle 1> [3]
+[18]     1.5    0.04    0.05  387165         GameWithHistory::for_each_legal_move(std::function<bool (Game&, GameMove&)>) <cycle 1> [18]
+                0.05    0.00  774330/1161495     std::_Function_base::_Base_manager<AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&)::{lambda(Game&, GameMove&)#1}>::_M_manager(std::_Any_data&, std::_Function_base::_Base_manager<AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&)::{lambda(Game&, GameMove&)#1}> const&, std::_Manager_operation) [21]
+                              387165             Go::for_each_legal_move(std::function<bool (Game&, GameMove&)>) <cycle 1> [12]
+-----------------------------------------------
+                0.08    0.00 1673209/1673209     std::_Function_handler<bool (Game&, GameMove&), AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&)::{lambda(Game&, GameMove&)#1}>::_M_invoke(std::_Any_data const&, Game&, GameMove&) <cycle 1> [5]
+[19]     1.4    0.08    0.00 1673209         Go::operator=(Game&&) [19]
+-----------------------------------------------
+                0.07    0.00 1572443/1572443     Go::play(GameMove&) [7]
+[20]     1.2    0.07    0.00 1572443         Go::move_is_suicide(unsigned short, Color) const [20]
+-----------------------------------------------
+                0.02    0.00  387165/1161495     AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&) <cycle 1> [3]
+                0.05    0.00  774330/1161495     GameWithHistory::for_each_legal_move(std::function<bool (Game&, GameMove&)>) <cycle 1> [18]
+[21]     1.2    0.07    0.00 1161495         std::_Function_base::_Base_manager<AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&)::{lambda(Game&, GameMove&)#1}>::_M_manager(std::_Any_data&, std::_Function_base::_Base_manager<AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&)::{lambda(Game&, GameMove&)#1}> const&, std::_Manager_operation) [21]
+-----------------------------------------------
+                0.01    0.00  197044/1097578     Go::join_strings(unsigned int, unsigned int) [30]
+                0.06    0.00  900534/1097578     Go::append_string(unsigned short, Color, unsigned int) [15]
+[22]     1.2    0.07    0.00 1097578         Go::liberty_list_merge(unsigned short*, unsigned int, unsigned short*, unsigned int, unsigned short*, unsigned int) [22]
+-----------------------------------------------
+                0.00    0.00       1/1673267     std::_Sp_counted_base<(__gnu_cxx::_Lock_policy)1>::_M_release() [39]
+                0.00    0.00     184/1673267     std::_Sp_counted_ptr_inplace<GameWithHistory, std::allocator<GameWithHistory>, (__gnu_cxx::_Lock_policy)1>::_M_dispose() [37]
+                0.05    0.00 1673082/1673267     GameWithHistory::play(GameMove&) [6]
+[23]     0.9    0.05    0.00 1673267         Go::~Go() [23]
+-----------------------------------------------
+                0.05    0.00 1673266/1673266     Go::clone() const [17]
+[24]     0.9    0.05    0.00 1673266         Go::Go(Go const&) [24]
+-----------------------------------------------
+                0.00    0.00      29/1286101     regular_print(Game const&) [36]
+                0.05    0.00 1286072/1286101     AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&) <cycle 1> [3]
+[25]     0.9    0.05    0.00 1286101         GameWithHistory::get_score() const [25]
+-----------------------------------------------
+                0.01    0.02  183334/183334      Go::_do_play(unsigned short, Color) [8]
+[26]     0.6    0.01    0.02  183334         Go::merge_strings_around(unsigned short, Color, unsigned int) [26]
+                0.01    0.01  197044/197044      Go::join_strings(unsigned int, unsigned int) [30]
+-----------------------------------------------
+                0.03    0.00  671906/671906      Go::_do_play(unsigned short, Color) [8]
+[27]     0.5    0.03    0.00  671906         Go::place_lone_tile(unsigned short, Color) [27]
+-----------------------------------------------
+                0.00    0.00     112/2298        AlphaBetaMove::next_move(GameMove&) [1]
+                0.02    0.01    2186/2298        GameWithHistory::consistency_check() const [29]
+[28]     0.5    0.02    0.01    2298         Go::consistency_check() const [28]
+                0.01    0.00   26634/26634       std::pair<std::_Rb_tree_iterator<unsigned int>, bool> std::_Rb_tree<unsigned int, unsigned int, std::_Identity<unsigned int>, std::less<unsigned int>, std::allocator<unsigned int> >::_M_insert_unique<unsigned int const&>(unsigned int const&) [35]
+                0.00    0.00   44287/44287       std::pair<std::_Rb_tree_iterator<unsigned short>, bool> std::_Rb_tree<unsigned short, unsigned short, std::_Identity<unsigned short>, std::less<unsigned short>, std::allocator<unsigned short> >::_M_insert_unique<unsigned short const&>(unsigned short const&) [55]
+                0.00    0.00   19298/19298       std::_Rb_tree<unsigned short, unsigned short, std::_Identity<unsigned short>, std::less<unsigned short>, std::allocator<unsigned short> >::_M_erase(std::_Rb_tree_node<unsigned short>*) [56]
+                0.00    0.00    2791/2791        std::_Rb_tree<unsigned int, unsigned int, std::_Identity<unsigned int>, std::less<unsigned int>, std::allocator<unsigned int> >::_M_erase(std::_Rb_tree_node<unsigned int>*) [58]
+                0.00    0.00    2791/2791        std::_Rb_tree<unsigned int, std::pair<unsigned int const, unsigned short>, std::_Select1st<std::pair<unsigned int const, unsigned short> >, std::less<unsigned int>, std::allocator<std::pair<unsigned int const, unsigned short> > >::_M_erase(std::_Rb_tree_node<std::pair<unsigned int const, unsigned short> >*) [57]
+-----------------------------------------------
+                0.00    0.03     112/112         AlphaBetaMove::next_move(GameMove&) [1]
+[29]     0.5    0.00    0.03     112         GameWithHistory::consistency_check() const [29]
+                0.02    0.01    2186/2298        Go::consistency_check() const [28]
+-----------------------------------------------
+                0.01    0.01  197044/197044      Go::merge_strings_around(unsigned short, Color, unsigned int) [26]
+[30]     0.4    0.01    0.01  197044         Go::join_strings(unsigned int, unsigned int) [30]
+                0.01    0.00  197044/1097578     Go::liberty_list_merge(unsigned short*, unsigned int, unsigned short*, unsigned int, unsigned short*, unsigned int) [22]
+-----------------------------------------------
+                0.00    0.00       1/1673267     std::_Sp_counted_base<(__gnu_cxx::_Lock_policy)1>::_M_release() [39]
+                0.00    0.00     184/1673267     std::_Sp_counted_ptr_inplace<GameWithHistory, std::allocator<GameWithHistory>, (__gnu_cxx::_Lock_policy)1>::_M_dispose() [37]
+                0.02    0.00 1673082/1673267     GameWithHistory::play(GameMove&) [6]
+[31]     0.3    0.02    0.00 1673267         std::_Sp_counted_ptr_inplace<Go, std::allocator<Go>, (__gnu_cxx::_Lock_policy)1>::_M_dispose() [31]
+-----------------------------------------------
+                0.01    0.00 1673209/1673209     std::_Function_handler<bool (Game&, GameMove&), AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&)::{lambda(Game&, GameMove&)#1}>::_M_invoke(std::_Any_data const&, Game&, GameMove&) <cycle 1> [5]
+[32]     0.2    0.01    0.00 1673209         GameWithHistory::undo() [32]
+-----------------------------------------------
+                0.01    0.00  387165/387165      AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&) <cycle 1> [3]
+[33]     0.2    0.01    0.00  387165         GameWithHistory::max_player() const [33]
+-----------------------------------------------
+                0.00    0.00   14583/130876      Go::_do_play(unsigned short, Color) [8]
+                0.01    0.00  116293/130876      Go::subtract_liberties(unsigned short, Color) [16]
+[34]     0.2    0.01    0.00  130876         Go::erase_string(unsigned int) [34]
+-----------------------------------------------
+                0.01    0.00   26634/26634       Go::consistency_check() const [28]
+[35]     0.2    0.01    0.00   26634         std::pair<std::_Rb_tree_iterator<unsigned int>, bool> std::_Rb_tree<unsigned int, unsigned int, std::_Identity<unsigned int>, std::less<unsigned int>, std::allocator<unsigned int> >::_M_insert_unique<unsigned int const&>(unsigned int const&) [35]
+-----------------------------------------------
+                                                 <spontaneous>
+[36]     0.0    0.00    0.00                 regular_print(Game const&) [36]
+                0.00    0.00      29/1286101     Go::get_score() const [4]
+                0.00    0.00      29/1286101     GameWithHistory::get_score() const [25]
+                0.00    0.00      29/29          Go::print(std::ostream&) const [66]
+                0.00    0.00      29/29          GameWithHistory::print(std::ostream&) const [65]
+-----------------------------------------------
+                0.00    0.00       1/29          std::_Sp_counted_base<(__gnu_cxx::_Lock_policy)1>::_M_release() [39]
+                0.00    0.00      28/29          AlphaBetaMove::next_move(GameMove&) [1]
+[37]     0.0    0.00    0.00      29         std::_Sp_counted_ptr_inplace<GameWithHistory, std::allocator<GameWithHistory>, (__gnu_cxx::_Lock_policy)1>::_M_dispose() [37]
+                0.00    0.00     184/1673267     Go::~Go() [23]
+                0.00    0.00     184/1673267     std::_Sp_counted_ptr_inplace<Go, std::allocator<Go>, (__gnu_cxx::_Lock_policy)1>::_M_dispose() [31]
+                0.00    0.00     156/1673266     std::_Sp_counted_ptr_inplace<Go, std::allocator<Go>, (__gnu_cxx::_Lock_policy)1>::_M_destroy() [51]
+-----------------------------------------------
+                0.00    0.00      28/28          AlphaBetaMove::next_move(GameMove&) [1]
+[38]     0.0    0.00    0.00      28         GameWithHistory::clone() const [38]
+                0.00    0.00      28/1673265     Go::clone() const [17]
+                0.00    0.00      28/28          std::_Sp_counted_ptr_inplace<GameWithHistory, std::allocator<GameWithHistory>, (__gnu_cxx::_Lock_policy)1>::_M_get_deleter(std::type_info const&) [71]
+-----------------------------------------------
+                                                 <spontaneous>
+[39]     0.0    0.00    0.00                 std::_Sp_counted_base<(__gnu_cxx::_Lock_policy)1>::_M_release() [39]
+                0.00    0.00       1/29          std::_Sp_counted_ptr_inplace<GameWithHistory, std::allocator<GameWithHistory>, (__gnu_cxx::_Lock_policy)1>::_M_dispose() [37]
+                0.00    0.00       1/1673267     Go::~Go() [23]
+                0.00    0.00       1/1673267     std::_Sp_counted_ptr_inplace<Go, std::allocator<Go>, (__gnu_cxx::_Lock_policy)1>::_M_dispose() [31]
+                0.00    0.00       1/1           std::_Sp_counted_ptr_inplace<AlphaBetaMove, std::allocator<AlphaBetaMove>, (__gnu_cxx::_Lock_policy)1>::_M_dispose() [78]
+-----------------------------------------------
+                0.00    0.00      28/1673266     AlphaBetaMove::next_move(GameMove&) [1]
+                0.00    0.00     156/1673266     std::_Sp_counted_ptr_inplace<GameWithHistory, std::allocator<GameWithHistory>, (__gnu_cxx::_Lock_policy)1>::_M_dispose() [37]
+                0.00    0.00 1673082/1673266     GameWithHistory::play(GameMove&) [6]
+[51]     0.0    0.00    0.00 1673266         std::_Sp_counted_ptr_inplace<Go, std::allocator<Go>, (__gnu_cxx::_Lock_policy)1>::_M_destroy() [51]
+-----------------------------------------------
+                0.00    0.00      29/387474      AlphaBetaMove::next_move(GameMove&) [1]
+                0.00    0.00  387445/387474      AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&) <cycle 1> [3]
+[52]     0.0    0.00    0.00  387474         GameWithHistory::game_over() const [52]
+-----------------------------------------------
+                0.00    0.00      29/387474      AlphaBetaMove::next_move(GameMove&) [1]
+                0.00    0.00  387445/387474      AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&) <cycle 1> [3]
+[53]     0.0    0.00    0.00  387474         Go::game_over() const [53]
+-----------------------------------------------
+                0.00    0.00  387165/387165      AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&) <cycle 1> [3]
+[54]     0.0    0.00    0.00  387165         Go::max_player() const [54]
+-----------------------------------------------
+                0.00    0.00   44287/44287       Go::consistency_check() const [28]
+[55]     0.0    0.00    0.00   44287         std::pair<std::_Rb_tree_iterator<unsigned short>, bool> std::_Rb_tree<unsigned short, unsigned short, std::_Identity<unsigned short>, std::less<unsigned short>, std::allocator<unsigned short> >::_M_insert_unique<unsigned short const&>(unsigned short const&) [55]
+-----------------------------------------------
+                               42180             std::_Rb_tree<unsigned short, unsigned short, std::_Identity<unsigned short>, std::less<unsigned short>, std::allocator<unsigned short> >::_M_erase(std::_Rb_tree_node<unsigned short>*) [56]
+                0.00    0.00   19298/19298       Go::consistency_check() const [28]
+[56]     0.0    0.00    0.00   19298+42180   std::_Rb_tree<unsigned short, unsigned short, std::_Identity<unsigned short>, std::less<unsigned short>, std::allocator<unsigned short> >::_M_erase(std::_Rb_tree_node<unsigned short>*) [56]
+                               42180             std::_Rb_tree<unsigned short, unsigned short, std::_Identity<unsigned short>, std::less<unsigned short>, std::allocator<unsigned short> >::_M_erase(std::_Rb_tree_node<unsigned short>*) [56]
+-----------------------------------------------
+                               21019             std::_Rb_tree<unsigned int, std::pair<unsigned int const, unsigned short>, std::_Select1st<std::pair<unsigned int const, unsigned short> >, std::less<unsigned int>, std::allocator<std::pair<unsigned int const, unsigned short> > >::_M_erase(std::_Rb_tree_node<std::pair<unsigned int const, unsigned short> >*) [57]
+                0.00    0.00    2791/2791        Go::consistency_check() const [28]
+[57]     0.0    0.00    0.00    2791+21019   std::_Rb_tree<unsigned int, std::pair<unsigned int const, unsigned short>, std::_Select1st<std::pair<unsigned int const, unsigned short> >, std::less<unsigned int>, std::allocator<std::pair<unsigned int const, unsigned short> > >::_M_erase(std::_Rb_tree_node<std::pair<unsigned int const, unsigned short> >*) [57]
+                               21019             std::_Rb_tree<unsigned int, std::pair<unsigned int const, unsigned short>, std::_Select1st<std::pair<unsigned int const, unsigned short> >, std::less<unsigned int>, std::allocator<std::pair<unsigned int const, unsigned short> > >::_M_erase(std::_Rb_tree_node<std::pair<unsigned int const, unsigned short> >*) [57]
+-----------------------------------------------
+                               26634             std::_Rb_tree<unsigned int, unsigned int, std::_Identity<unsigned int>, std::less<unsigned int>, std::allocator<unsigned int> >::_M_erase(std::_Rb_tree_node<unsigned int>*) [58]
+                0.00    0.00    2791/2791        Go::consistency_check() const [28]
+[58]     0.0    0.00    0.00    2791+26634   std::_Rb_tree<unsigned int, unsigned int, std::_Identity<unsigned int>, std::less<unsigned int>, std::allocator<unsigned int> >::_M_erase(std::_Rb_tree_node<unsigned int>*) [58]
+                               26634             std::_Rb_tree<unsigned int, unsigned int, std::_Identity<unsigned int>, std::less<unsigned int>, std::allocator<unsigned int> >::_M_erase(std::_Rb_tree_node<unsigned int>*) [58]
+-----------------------------------------------
+                0.00    0.00     510/510         Go::subtract_liberties(unsigned short, Color) [16]
+[59]     0.0    0.00    0.00     510         Go::recompute_string(unsigned int) [59]
+                0.00    0.00     510/510         void util::__bitonic_sort8<unsigned short>(unsigned short*) [61]
+                0.00    0.00     510/510         void util::const_sort<unsigned short, 8u>(unsigned short*) [60]
+-----------------------------------------------
+                0.00    0.00     510/510         Go::recompute_string(unsigned int) [59]
+[60]     0.0    0.00    0.00     510         void util::const_sort<unsigned short, 8u>(unsigned short*) [60]
+-----------------------------------------------
+                0.00    0.00     510/510         Go::recompute_string(unsigned int) [59]
+[61]     0.0    0.00    0.00     510         void util::__bitonic_sort8<unsigned short>(unsigned short*) [61]
+-----------------------------------------------
+                0.00    0.00     448/448         AlphaBetaMove::next_move(GameMove&) [1]
+[62]     0.0    0.00    0.00     448         Go::tile_at(unsigned char, unsigned char) const [62]
+-----------------------------------------------
+                0.00    0.00     188/188         Go::_print(std::ostream&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) const [67]
+[63]     0.0    0.00    0.00     188         Go::is_star_tile(unsigned char, unsigned char) const [63]
+-----------------------------------------------
+                0.00    0.00      41/41          GameWithHistory::play(GameMove&) [6]
+[64]     0.0    0.00    0.00      41         void std::vector<std::shared_ptr<Game>, std::allocator<std::shared_ptr<Game> > >::_M_realloc_insert<std::shared_ptr<Game> >(__gnu_cxx::__normal_iterator<std::shared_ptr<Game>*, std::vector<std::shared_ptr<Game>, std::allocator<std::shared_ptr<Game> > > >, std::shared_ptr<Game>&&) [64]
+-----------------------------------------------
+                0.00    0.00      29/29          regular_print(Game const&) [36]
+[65]     0.0    0.00    0.00      29         GameWithHistory::print(std::ostream&) const [65]
+-----------------------------------------------
+                0.00    0.00      29/29          regular_print(Game const&) [36]
+[66]     0.0    0.00    0.00      29         Go::print(std::ostream&) const [66]
+                0.00    0.00      29/29          Go::_print(std::ostream&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) const [67]
+-----------------------------------------------
+                0.00    0.00      29/29          Go::print(std::ostream&) const [66]
+[67]     0.0    0.00    0.00      29         Go::_print(std::ostream&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) const [67]
+                0.00    0.00     188/188         Go::is_star_tile(unsigned char, unsigned char) const [63]
+-----------------------------------------------
+                0.00    0.00      28/28          AlphaBetaMove::next_move(GameMove&) [1]
+[68]     0.0    0.00    0.00      28         GameWithHistory::strip() [68]
+-----------------------------------------------
+                0.00    0.00      28/28          AlphaBetaMove::next_move(GameMove&) [1]
+[69]     0.0    0.00    0.00      28         Go::strip() [69]
+-----------------------------------------------
+                0.00    0.00      28/28          AlphaBetaMove::next_move(GameMove&) [1]
+[70]     0.0    0.00    0.00      28         std::_Sp_counted_ptr_inplace<GameWithHistory, std::allocator<GameWithHistory>, (__gnu_cxx::_Lock_policy)1>::_M_destroy() [70]
+-----------------------------------------------
+                0.00    0.00      28/28          GameWithHistory::clone() const [38]
+[71]     0.0    0.00    0.00      28         std::_Sp_counted_ptr_inplace<GameWithHistory, std::allocator<GameWithHistory>, (__gnu_cxx::_Lock_policy)1>::_M_get_deleter(std::type_info const&) [71]
+-----------------------------------------------
+                0.00    0.00       1/1           __libc_csu_init [361]
+[72]     0.0    0.00    0.00       1         _GLOBAL__sub_I__Z7print_wRKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEj [72]
+-----------------------------------------------
+                0.00    0.00       1/1           __libc_csu_init [361]
+[73]     0.0    0.00    0.00       1         _GLOBAL__sub_I__ZN13AlphaBetaMove11move_searchER4GameiiiP8GameMoveRy [73]
+-----------------------------------------------
+                0.00    0.00       1/1           __libc_csu_init [361]
+[74]     0.0    0.00    0.00       1         _GLOBAL__sub_I__ZN8FileMove10find_movesERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE [74]
+-----------------------------------------------
+                0.00    0.00       1/1           __libc_csu_init [361]
+[75]     0.0    0.00    0.00       1         _GLOBAL__sub_I__ZN8UserMove9next_moveER8GameMove [75]
+-----------------------------------------------
+                0.00    0.00       1/1           __libc_csu_init [361]
+[76]     0.0    0.00    0.00       1         _GLOBAL__sub_I__ZNK2Go6to_idxEhh [76]
+-----------------------------------------------
+                0.00    0.00       1/1           Go::Go(unsigned char, unsigned char) [100]
+[77]     0.0    0.00    0.00       1         Go::clear() [77]
+-----------------------------------------------
+                0.00    0.00       1/1           std::_Sp_counted_base<(__gnu_cxx::_Lock_policy)1>::_M_release() [39]
+[78]     0.0    0.00    0.00       1         std::_Sp_counted_ptr_inplace<AlphaBetaMove, std::allocator<AlphaBetaMove>, (__gnu_cxx::_Lock_policy)1>::_M_dispose() [78]
+-----------------------------------------------
+
+ This table describes the call tree of the program, and was sorted by
+ the total amount of time spent in each function and its children.
+
+ Each entry in this table consists of several lines.  The line with the
+ index number at the left hand margin lists the current function.
+ The lines above it list the functions that called this function,
+ and the lines below it list the functions this one called.
+ This line lists:
+     index	A unique number given to each element of the table.
+		Index numbers are sorted numerically.
+		The index number is printed next to every function name so
+		it is easier to look up where the function is in the table.
+
+     % time	This is the percentage of the `total' time that was spent
+		in this function and its children.  Note that due to
+		different viewpoints, functions excluded by options, etc,
+		these numbers will NOT add up to 100%.
+
+     self	This is the total amount of time spent in this function.
+
+     children	This is the total amount of time propagated into this
+		function by its children.
+
+     called	This is the number of times the function was called.
+		If the function called itself recursively, the number
+		only includes non-recursive calls, and is followed by
+		a `+' and the number of recursive calls.
+
+     name	The name of the current function.  The index number is
+		printed after it.  If the function is a member of a
+		cycle, the cycle number is printed between the
+		function's name and the index number.
+
+
+ For the function's parents, the fields have the following meanings:
+
+     self	This is the amount of time that was propagated directly
+		from the function into this parent.
+
+     children	This is the amount of time that was propagated from
+		the function's children into this parent.
+
+     called	This is the number of times this parent called the
+		function `/' the total number of times the function
+		was called.  Recursive calls to the function are not
+		included in the number after the `/'.
+
+     name	This is the name of the parent.  The parent's index
+		number is printed after it.  If the parent is a
+		member of a cycle, the cycle number is printed between
+		the name and the index number.
+
+ If the parents of the function cannot be determined, the word
+ `<spontaneous>' is printed in the `name' field, and all the other
+ fields are blank.
+
+ For the function's children, the fields have the following meanings:
+
+     self	This is the amount of time that was propagated directly
+		from the child into the function.
+
+     children	This is the amount of time that was propagated from the
+		child's children to the function.
+
+     called	This is the number of times the function called
+		this child `/' the total number of times the child
+		was called.  Recursive calls by the child are not
+		listed in the number after the `/'.
+
+     name	This is the name of the child.  The child's index
+		number is printed after it.  If the child is a
+		member of a cycle, the cycle number is printed
+		between the name and the index number.
+
+ If there are any cycles (circles) in the call graph, there is an
+ entry for the cycle-as-a-whole.  This entry shows who called the
+ cycle (as parents) and the members of the cycle (as children.)
+ The `+' recursive calls entry shows the number of function calls that
+ were internal to the cycle, and the calls entry for each member shows,
+ for that member, how many times it was called from other members of
+ the cycle.
+
+Copyright (C) 2012-2017 Free Software Foundation, Inc.
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.
+
+Index by function name
+
+  [72] _GLOBAL__sub_I__Z7print_wRKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEj [8] Go::_do_play(unsigned short, Color) [9] std::_Hashtable<unsigned long long, std::pair<unsigned long long const, std::pair<unsigned short, unsigned char> >, std::allocator<std::pair<unsigned long long const, std::pair<unsigned short, unsigned char> > >, std::__detail::_Select1st, std::equal_to<unsigned long long>, std::hash<unsigned long long>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::_M_insert_unique_node(unsigned int, unsigned int, std::__detail::_Hash_node<std::pair<unsigned long long const, std::pair<unsigned short, unsigned char> >, false>*, unsigned int)
+  [73] _GLOBAL__sub_I__ZN13AlphaBetaMove11move_searchER4GameiiiP8GameMoveRy [24] Go::Go(Go const&) [13] std::_Hashtable<unsigned long long, std::pair<unsigned long long const, std::pair<unsigned short, unsigned char> >, std::allocator<std::pair<unsigned long long const, std::pair<unsigned short, unsigned char> > >, std::__detail::_Select1st, std::equal_to<unsigned long long>, std::hash<unsigned long long>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::erase(std::__detail::_Node_const_iterator<std::pair<unsigned long long const, std::pair<unsigned short, unsigned char> >, false, false>)
+  [74] _GLOBAL__sub_I__ZN8FileMove10find_movesERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE [23] Go::~Go() [21] std::_Function_base::_Base_manager<AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&)::{lambda(Game&, GameMove&)#1}>::_M_manager(std::_Any_data&, std::_Function_base::_Base_manager<AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&)::{lambda(Game&, GameMove&)#1}> const&, std::_Manager_operation)
+  [75] _GLOBAL__sub_I__ZN8UserMove9next_moveER8GameMove [19] Go::operator=(Game&&) [5] std::_Function_handler<bool (Game&, GameMove&), AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&)::{lambda(Game&, GameMove&)#1}>::_M_invoke(std::_Any_data const&, Game&, GameMove&)
+  [76] _GLOBAL__sub_I__ZNK2Go6to_idxEhh [60] void util::const_sort<unsigned short, 8u>(unsigned short*) [78] std::_Sp_counted_ptr_inplace<AlphaBetaMove, std::allocator<AlphaBetaMove>, (__gnu_cxx::_Lock_policy)1>::_M_dispose()
+   [3] AlphaBetaMove::move_search(Game&, int, int, int, GameMove*, unsigned long long&) [61] void util::__bitonic_sort8<unsigned short>(unsigned short*) [70] std::_Sp_counted_ptr_inplace<GameWithHistory, std::allocator<GameWithHistory>, (__gnu_cxx::_Lock_policy)1>::_M_destroy()
+  [18] GameWithHistory::for_each_legal_move(std::function<bool (Game&, GameMove&)>) [33] GameWithHistory::max_player() const [37] std::_Sp_counted_ptr_inplace<GameWithHistory, std::allocator<GameWithHistory>, (__gnu_cxx::_Lock_policy)1>::_M_dispose()
+   [6] GameWithHistory::play(GameMove&) [29] GameWithHistory::consistency_check() const [71] std::_Sp_counted_ptr_inplace<GameWithHistory, std::allocator<GameWithHistory>, (__gnu_cxx::_Lock_policy)1>::_M_get_deleter(std::type_info const&)
+  [32] GameWithHistory::undo() [38] GameWithHistory::clone() const [51] std::_Sp_counted_ptr_inplace<Go, std::allocator<Go>, (__gnu_cxx::_Lock_policy)1>::_M_destroy()
+  [68] GameWithHistory::strip() [65] GameWithHistory::print(std::ostream&) const [31] std::_Sp_counted_ptr_inplace<Go, std::allocator<Go>, (__gnu_cxx::_Lock_policy)1>::_M_dispose()
+  [34] Go::erase_string(unsigned int) [52] GameWithHistory::game_over() const [64] void std::vector<std::shared_ptr<Game>, std::allocator<std::shared_ptr<Game> > >::_M_realloc_insert<std::shared_ptr<Game> >(__gnu_cxx::__normal_iterator<std::shared_ptr<Game>*, std::vector<std::shared_ptr<Game>, std::allocator<std::shared_ptr<Game> > > >, std::shared_ptr<Game>&&)
+  [30] Go::join_strings(unsigned int, unsigned int) [25] GameWithHistory::get_score() const [57] std::_Rb_tree<unsigned int, std::pair<unsigned int const, unsigned short>, std::_Select1st<std::pair<unsigned int const, unsigned short> >, std::less<unsigned int>, std::allocator<std::pair<unsigned int const, unsigned short> > >::_M_erase(std::_Rb_tree_node<std::pair<unsigned int const, unsigned short> >*)
+  [15] Go::append_string(unsigned short, Color, unsigned int) [54] Go::max_player() const [35] std::pair<std::_Rb_tree_iterator<unsigned int>, bool> std::_Rb_tree<unsigned int, unsigned int, std::_Identity<unsigned int>, std::less<unsigned int>, std::allocator<unsigned int> >::_M_insert_unique<unsigned int const&>(unsigned int const&)
+  [27] Go::place_lone_tile(unsigned short, Color) [63] Go::is_star_tile(unsigned char, unsigned char) const [58] std::_Rb_tree<unsigned int, unsigned int, std::_Identity<unsigned int>, std::less<unsigned int>, std::allocator<unsigned int> >::_M_erase(std::_Rb_tree_node<unsigned int>*)
+  [59] Go::recompute_string(unsigned int) [20] Go::move_is_suicide(unsigned short, Color) const [55] std::pair<std::_Rb_tree_iterator<unsigned short>, bool> std::_Rb_tree<unsigned short, unsigned short, std::_Identity<unsigned short>, std::less<unsigned short>, std::allocator<unsigned short> >::_M_insert_unique<unsigned short const&>(unsigned short const&)
+  [22] Go::liberty_list_merge(unsigned short*, unsigned int, unsigned short*, unsigned int, unsigned short*, unsigned int) [28] Go::consistency_check() const [56] std::_Rb_tree<unsigned short, unsigned short, std::_Identity<unsigned short>, std::less<unsigned short>, std::allocator<unsigned short> >::_M_erase(std::_Rb_tree_node<unsigned short>*)
+  [16] Go::subtract_liberties(unsigned short, Color) [17] Go::clone() const [10] uf_find
+  [12] Go::for_each_legal_move(std::function<bool (Game&, GameMove&)>) [66] Go::print(std::ostream&) const [14] uf_init
+  [26] Go::merge_strings_around(unsigned short, Color, unsigned int) [67] Go::_print(std::ostream&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) const [11] uf_union
+   [7] Go::play(GameMove&)    [62] Go::tile_at(unsigned char, unsigned char) const [2] <cycle 1>
+  [77] Go::clear()            [53] Go::game_over() const
+  [69] Go::strip()             [4] Go::get_score() const
