@@ -8,7 +8,12 @@
 static constexpr const size_t runtime_err_buf_size = 1024;
 static char runtime_err_buf[runtime_err_buf_size];
 
+#ifdef __APPLE__
 #define VA_ARGS(...) , ##__VA_ARGS__
+#else
+#define VA_ARGS(...) __VA_OPT__(,) __VA_ARGS
+#endif
+
 #define GO_ASSERT(expr, msg, ...) \
     if (__builtin_expect(!(expr), 0)) { \
         snprintf(runtime_err_buf, runtime_err_buf_size, msg \
