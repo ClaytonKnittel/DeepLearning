@@ -11,7 +11,7 @@ static char runtime_err_buf[runtime_err_buf_size];
 #ifdef __APPLE__
 #define VA_ARGS(...) , ##__VA_ARGS__
 #else
-#define VA_ARGS(...) __VA_OPT__(,) __VA_ARGS
+#define VA_ARGS(...) __VA_OPT__(,) __VA_ARGS__
 #endif
 
 #define GO_ASSERT(expr, msg, ...) \
