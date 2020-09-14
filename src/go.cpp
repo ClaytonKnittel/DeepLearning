@@ -203,6 +203,8 @@ int Go::num_liberties(board_idx_t idx) const {
 
 
 /*
+ * TODO update:
+ *
  * the board can be packed like so
  *
  * xo.oxo
@@ -220,7 +222,8 @@ int Go::num_liberties(board_idx_t idx) const {
  * which is 4/5 dense with stones
  */
 uint32_t Go::calc_max_n_strings() const {
-    return (this->w * this->h * 4 + 4) / 5;
+    //return (this->w * this->h * 4 + 4) / 5;
+    return this->w * this->h;
 }
 
 
@@ -596,13 +599,13 @@ void Go::append_string(board_idx_t idx, Color color, uint32_t string_idx) {
     tile = strings[string_idx].first_tile;
     speak("  string now: (");
     do {
-        printf("%s", idx_str(tile).c_str());
+        speak("%s", idx_str(tile).c_str());
         tile = tiles[tile].next_tile;
         if (strings[string_idx].first_tile != tile) {
-            printf(", ");
+            speak(", ");
         }
     } while (strings[string_idx].first_tile != tile);
-    printf(")\n");
+    speak(")\n");
 #endif
 
     // calculate the updated string's liberties
