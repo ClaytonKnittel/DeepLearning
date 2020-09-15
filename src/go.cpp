@@ -4,7 +4,6 @@
 #include <sstream>
 #include <iomanip>
 #include <stdexcept>
-#include <unordered_map>
 #include <map>
 #include <unordered_set>
 #include <set>
@@ -27,6 +26,22 @@
 #include <curses.h>
 
 
+
+#define FOR_EACH_BEFORE(idx, n, action) \
+    do { \
+        n = idx_up((idx)); \
+        action \
+        n = idx_left((idx)); \
+        action \
+    } while (0)
+
+#define FOR_EACH_AFTER(idx, n, action) \
+    do { \
+        n = idx_right((idx)); \
+        action \
+        n = idx_down((idx)); \
+        action \
+    } while (0)
 
 #define FOR_EACH_ADJ(idx, n, action) \
     do { \
@@ -1459,69 +1474,112 @@ int Go::get_score() const {
     union_find uf;
     uf_init(&uf, (this->w + 2) * (this->h + 2));
 
-    std::unordered_map<uf_node_t, std::pair<uint16_t, uint8_t>> regs;
+    /*
+     * we will be using the top 30 bits of tile tiles to store both the sets
+     * of colors the tile is touching, along with the number of tiles in the
+     * "string", since empty tiles do not belong to any strings
+     *
+     * data field of Tile:
+     *   31               4 3  2 1     0
+     *  +----------- ... --+----+-------+
+     *  | num_tiles        | T  | color |
+     *  +----------- ... --+----+-------+
+     *
+     *  where T is either black, white or (black | white) (for both)
+     *  and num_tiles is the number of tiles connected to this one
+     */
+
+#define SCORE_FROM(cnt, touching) \
+    ({ \
+        uint32_t pos_mask = ((touching) == (((uint32_t) black) << 2)) ? \
+                            0xffffffffu : 0; \
+        uint32_t neg_mask = ((touching) == (((uint32_t) white) << 2)) ? \
+                            0xffffffffu : 0; \
+        ((cnt) & pos_mask) | ((-(cnt)) & neg_mask); \
+     })
+
+    // score is a running tally of 16 * the score (i.e. << 4)
+    int score = 0;
 
     for (coord_t y = 0; y < this->h; y++) {
         for (coord_t x = 0; x < this->w; x++) {
             board_idx_t idx = to_idx(x, y);
 
             if (is_liberty(idx)) {
-                uf_node_t p = uf_find(&uf, idx);
+                // the current group of stones idx is a part of
+                board_idx_t p = (board_idx_t) uf_find(&uf, idx);
 
-                uint16_t cnt;
-                uint8_t touching;
+                // since we are visiting stones in index-order and only checking
+                // adjacent liberties of stones with lower index, every liberty
+                // we visit has not yet been seen, so we put it in a group of
+                // size 1 not touching anyone
+                uint32_t cnt = 0x10;
+                uint8_t touching = 0;
 
-                auto it1 = regs.find(p);
-                if (it1 != regs.end()) {
-                    cnt = it1->second.first;
-                    touching = it1->second.second;
-                    regs.erase(it1);
-                }
-                else {
-                    cnt = 1;
-                    touching = 0;
-                }
                 board_idx_t n;
+                uint8_t p_touching;
+                uint32_t data, p_cnt;
 
-                FOR_EACH_ADJ(idx, n, {
+                // only check the two tiles with smaller indices than this one
+                // for adjacent liberties
+                FOR_EACH_BEFORE(idx, n, {
                     if (is_liberty(n)) {
-                        uf_node_t parent = uf_find(&uf, n);
+                        board_idx_t parent = (board_idx_t) uf_find(&uf, n);
+
+                        // don't do anything if this liberty is already in the
+                        // same group as idx
                         if (parent != p) {
-                            auto it = regs.find(parent);
-                            if (it != regs.end()) {
-                                cnt += it->second.first;
-                                touching |= it->second.second;
-                                regs.erase(it);
-                            }
-                            else {
-                                cnt++;
-                            }
-                            p = uf_union(&uf, parent, p);
+                            data = tiles[parent].data;
+
+                            // combine the touching bitmasks
+                            p_touching = data & 0xc;
+                            touching |= p_touching;
+
+                            // add the two counts
+                            p_cnt = data & ~0xfu;
+                            cnt += p_cnt;
+
+                            // subtract the old group's contribution to the
+                            // score
+                            score -= SCORE_FROM(p_cnt, p_touching);
+
+                            // union n with idx (but use their parent pointers
+                            // for faster traversal)
+                            p = (board_idx_t) uf_union(&uf, p, parent);
                         }
                     }
                     else if (is_stone(n)) {
-                        touching |= (uint8_t) tiles[n].color();
+                        // if we are touching a stone, or its color in the
+                        // bitmask of colors
+                        touching |= ((uint8_t) (tiles[n].color())) << 2;
                     }
                 });
 
-                regs.insert({ p, { cnt, touching } });
+                // we still have to check the two adjacent tiles for stones,
+                // since we will skip them when we get to them
+                FOR_EACH_AFTER(idx, n, {
+                    if (is_stone(n)) {
+                        // if we are touching a stone, or its color in the
+                        // bitmask of colors
+                        touching |= ((uint8_t) (tiles[n].color())) << 2;
+                    }
+                });
+
+                // add the contribution to the score this new group has
+                score += SCORE_FROM(cnt, touching);
+
+                // save metadata calculated in the tiles structure, using the
+                // unused top 30 bits of p (since it's guaranteed to be an empty
+                // tile)
+                tiles[p].data = (tiles[p].data & 0x3) | touching | cnt;
             }
         }
     }
 
-    int score = black_captures - white_captures;
-
-    for (auto it = regs.begin(); it != regs.end(); it++) {
-        /*printw("%s -> (%u, %u)\n", idx_str(it->first).c_str(),
-                it->second.first, it->second.second);*/
-        uint16_t cnt = it->second.first;
-        uint8_t mask = it->second.second;
-        score += (mask == Color::black) ? cnt :
-            ((mask == Color::white) ? -cnt : 0);
-    }
+    score += black_captures - white_captures;
 
     uf_destroy(&uf);
-    return score;
+    return score >> 4;
 }
 
 bool Go::max_player() const {
