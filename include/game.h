@@ -55,7 +55,7 @@ public:
 
 
     // strips away all decorators
-    virtual Game & strip() = 0;
+    virtual Game & strip() const = 0;
 
 
     /*

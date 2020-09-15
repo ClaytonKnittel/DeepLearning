@@ -374,8 +374,8 @@ public:
     Color tile_at(coord_t x, coord_t y) const;
 
 
-    virtual Game & strip() {
-        return *this;
+    virtual Game & strip() const {
+        return const_cast<Go &>(*this);
     }
 
     virtual std::shared_ptr<Game> clone() const;

@@ -114,7 +114,7 @@ public:
         endwin();
     }
 
-    virtual Game & strip() {
+    virtual Game & strip() const {
         return parent->strip();
     }
 

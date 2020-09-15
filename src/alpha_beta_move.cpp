@@ -51,21 +51,16 @@ MoveStatus AlphaBetaMove::next_move(GameMove & move) {
         getch();
         return failed;
     }
-    game.consistency_check();
 
     GameState state(dynamic_cast<Go &>(game.strip()));
     state.print();
 
     std::shared_ptr<Game> game_clone = game.clone();
 
-    game.consistency_check();
-    game_clone->consistency_check();
-
     uint64_t cnt = 0;
     move_search(*game_clone, min_int, max_int, max_depth, &move, cnt);
 
     printf("Explored %llu game states\n", cnt);
-    game_clone->consistency_check();
 
     GoMove mv = dynamic_cast<GoMove &>(move);
     /*printf("\r\nMove: %s (%u, %u)\r\n", mv.color == black ? "black" :

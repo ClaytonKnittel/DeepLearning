@@ -15,6 +15,7 @@
 #include <game_with_history.h>
 #include <game_with_info.h>
 #include <go.h>
+#include <recorded_game.h>
 #include <user_move.h>
 
 
@@ -63,41 +64,65 @@ void regular_print(const Game & g) {
 int main(int argc, char * argv[]) {
 
     std::shared_ptr<Go> game = std::make_shared<Go>(4, 4);
-    std::shared_ptr<GameWithHistory> gh =
-        std::make_shared<GameWithHistory>(game);
+    std::shared_ptr<Game> cur_game = game;
 
-#ifdef DO_CURSES
-    GameWithInfo g(gh);
-#else
-    Game & g = *gh;
-#endif
-    g.consistency_check();
+#define SAVE_FILE_SIZE 128
+    char save_file[SAVE_FILE_SIZE];
+    save_file[0] = '\0';
 
     void(*print_fn)(const Game &) = regular_print;
 
     bool print = true;
 
     std::shared_ptr<MoveGen> move_gen = nullptr;
+    bool do_ai = false, do_file = false;
 
     int opt;
-    while ((opt = getopt(argc, argv, "af:")) != -1) {
+    while ((opt = getopt(argc, argv, "af:s:")) != -1) {
         switch(opt) {
             case 'a':
-                move_gen = std::make_shared<AlphaBetaMove>(g, 11);
+                do_ai = true;
                 break;
             case 'f':
-                move_gen = std::make_shared<FileMove>(optarg, g);
+                do_file = true;
+                break;
+            case 's':
+                strncpy(save_file, optarg, SAVE_FILE_SIZE);
                 break;
             case '?':
             default:
-                std::cout << "usage: " << argv[0] << " [-f <sgf file>]" << std::endl;
+                std::cout << "usage: " << argv[0] << " [-a]" <<
+                   " [-f <input sgf file>]" <<
+                   " [-s <output sgf file name>]" << std::endl;
                 return -1;
         }
     }
 
-    if (move_gen == nullptr) {
-        move_gen = std::make_shared<UserMove>(g);
+    if (do_ai) {
+        std::shared_ptr<GameWithHistory> gh =
+            std::make_shared<GameWithHistory>(cur_game);
+        cur_game = gh;
+        move_gen = std::make_shared<AlphaBetaMove>(*cur_game, 10);
     }
+    else if (do_file) {
+        move_gen = std::make_shared<FileMove>(optarg, *cur_game);
+    }
+    else {
+        move_gen = std::make_shared<UserMove>(*cur_game);
+    }
+
+    std::shared_ptr<RecordedGame> rg = nullptr;
+    if (save_file[0] != '\0') {
+        rg = std::make_shared<RecordedGame>(cur_game);
+        cur_game = rg;
+    }
+
+#ifdef DO_CURSES
+    GameWithInfo g(cur_game);
+#else
+    Game & g = *cur_game;
+#endif
+    g.consistency_check();
 
 
     while (true) {
@@ -139,7 +164,6 @@ int main(int argc, char * argv[]) {
             else {
                 g.play(m);
             }
-            g.consistency_check();
         } catch (const std::runtime_error & e) {
             print_fn(g);
             attron(COLOR_PAIR(5));
@@ -149,6 +173,10 @@ int main(int argc, char * argv[]) {
             getch();
             break;
         }
+    }
+
+    if (save_file[0] != '\0') {
+        rg->save_game(save_file);
     }
 
     return 0;

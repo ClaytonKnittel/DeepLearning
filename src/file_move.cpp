@@ -17,7 +17,7 @@ void FileMove::find_moves(const std::string & file_name) {
                 break;
             }
 
-            r = std::make_shared<std::regex>("\\s*([^\\[]+)\\[([^\\]]+)\\]");
+            r = std::make_shared<std::regex>("\\s*([^\\[]+)\\[([^\\]]*)\\]");
             begin = std::make_shared<std::sregex_iterator>(
                     str.begin(), str.end(), *r);
             end = std::make_shared<std::sregex_iterator>();
@@ -54,8 +54,15 @@ void FileMove::find_moves(const std::string & file_name) {
             }
 
             std::string coords = match[2];
-            m.x = (coord_t) (coords[0] - 'a');
-            m.y = (coord_t) (coords[1] - 'a');
+            if (coords == "") {
+                printf("PASS\n");
+                m.color = Color::pass;
+            }
+            else {
+                printf("PASS no \"%s\"\n", coords.c_str());
+                m.x = (coord_t) (coords[0] - 'a');
+                m.y = (coord_t) (coords[1] - 'a');
+            }
 
             moves.push_back(m);
         }
@@ -77,7 +84,9 @@ MoveStatus FileMove::next_move(GameMove & move) {
     if (ch == 'n') {
 #endif /* DO_CURSES */
         if (game.get_turn() >= moves.size()) {
-            return retry;
+            std::string buf;
+            std::getline(std::cin, buf);
+            return failed;
         }
         gm = moves[game.get_turn()];
         return ok;

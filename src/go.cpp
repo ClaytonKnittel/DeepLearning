@@ -1411,7 +1411,7 @@ Go & Go::operator=(const Go & g) {
 }
 
 Game & Go::operator=(const Game & game) {
-    const Go & g = dynamic_cast<const Go &>(game);
+    const Go & g = dynamic_cast<const Go &>(game.strip());
     return (*this) = g;
 }
 

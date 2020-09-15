@@ -34,7 +34,7 @@ public:
 
     virtual ~GameWithHistory() {}
 
-    virtual Game & strip() {
+    virtual Game & strip() const {
         return parent->strip();
     }
 
