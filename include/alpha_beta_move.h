@@ -92,8 +92,8 @@ struct GameStateHash {
 
 class AlphaBetaMove : public MoveGen {
     friend bool _play(Game &, GameMove & m, Game & g,
-            int & alpha, int & beta, int & best_val, int & depth,
-            uint32_t & res_mask, GameMove * move, uint64_t & cnt);
+            int & alpha, int & beta, int & best_val, int depth,
+            uint32_t res_mask, GameMove * move, uint64_t & cnt);
 private:
 
     static constexpr int inf_depth = -1;

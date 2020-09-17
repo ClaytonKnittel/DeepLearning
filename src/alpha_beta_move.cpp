@@ -5,8 +5,8 @@
 #include <game_with_info.h>
 
 
-bool _play(Game &, GameMove & m, Game & g, int & alpha, int & beta,
-        int & best_val, int & depth, uint32_t & res_mask, GameMove * move,
+inline bool _play(Game &, GameMove & m, Game & g, int & alpha, int & beta,
+        int & best_val, int depth, uint32_t res_mask, GameMove * move,
         uint64_t & cnt) {
     g.play(m);
 
@@ -44,8 +44,8 @@ int AlphaBetaMove::move_search(Game & g, int alpha, int beta, int depth, GameMov
 
     Go & go = dynamic_cast<Go &>(g.strip());
     go.for_each_legal_move_inline<bool(Game &, GameMove &, Game &, int &,
-            int &, int &, int &, uint32_t &, GameMove *, uint64_t &), Game &,
-        int &, int &, int &, int &, uint32_t &, GameMove *, uint64_t &>
+            int &, int &, int, uint32_t, GameMove *, uint64_t &), Game &,
+        int &, int &, int &, int, uint32_t, GameMove *, uint64_t &>
             (_play, g, alpha, beta, best_val, depth, res_mask, move, cnt);
 
     return best_val ^ res_mask;

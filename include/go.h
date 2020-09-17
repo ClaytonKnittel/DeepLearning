@@ -397,7 +397,7 @@ public:
     virtual void for_each_legal_move(std::function<bool(Game &, GameMove &)> f);
 
     template<typename Fn, typename... Args>
-    void for_each_legal_move_inline(Fn &fn, Args &...args) {
+    inline void for_each_legal_move_inline(const Fn &fn, Args &...args) {
         GoMove m;
 
         if (game_over()) {

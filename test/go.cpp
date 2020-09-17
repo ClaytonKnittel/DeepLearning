@@ -63,7 +63,7 @@ void regular_print(const Game & g) {
 
 int main(int argc, char * argv[]) {
 
-    std::shared_ptr<Go> game = std::make_shared<Go>(3, 3);
+    std::shared_ptr<Go> game = std::make_shared<Go>(4, 4);
     std::shared_ptr<Game> cur_game = game;
 
 #define SAVE_FILE_SIZE 128
@@ -102,7 +102,7 @@ int main(int argc, char * argv[]) {
         std::shared_ptr<GameWithHistory> gh =
             std::make_shared<GameWithHistory>(cur_game);
         cur_game = gh;
-        move_gen = std::make_shared<AlphaBetaMove>(*cur_game, 10);
+        move_gen = std::make_shared<AlphaBetaMove>(*cur_game, 11);
     }
     else if (do_file) {
         move_gen = std::make_shared<FileMove>(optarg, *cur_game);
