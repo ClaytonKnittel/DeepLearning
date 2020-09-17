@@ -5,6 +5,7 @@
 
 #include <game_state.h>
 #include <move_gen.h>
+#include <zobrist.h>
 
 
 class AlphaBetaMove : public MoveGen {
@@ -23,6 +24,8 @@ private:
     // maximum number of moves deep we will search
     int max_depth;
 
+    ZobristHash zh;
+
 
     static int move_search(Game & g, int alpha, int beta, int depth,
             GameMove * move, uint64_t & cnt);
@@ -30,7 +33,7 @@ private:
 public:
 
     AlphaBetaMove(Game & game, int max_depth=inf_depth) : game(game),
-            max_depth(max_depth) {}
+            max_depth(max_depth), zh(game.width(), game.height()) {}
 
     virtual ~AlphaBetaMove() = default;
 

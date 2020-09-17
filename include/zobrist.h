@@ -55,7 +55,12 @@ private:
     /*
      * "mirror" the hash about the vertical symmetry line
      */
-    static zob_hash_t mir(zob_hash_t h);
+    static zob_hash_t vmir(zob_hash_t h);
+
+    /*
+     * "mirror" the hash about the horizontal symmetry line
+     */
+    static zob_hash_t hmir(zob_hash_t h);
 
     /*
      * swap the colors of the hash
@@ -67,7 +72,7 @@ private:
      * returns the index of the given coordinate triple, where
      * color is one of empty, black, or white
      */
-    size_t to_idx(coord_t x, coord_t y, uint8_t color) const;
+    board_idx_t to_idx(coord_t x, coord_t y, uint8_t color) const;
 
 
     /*
