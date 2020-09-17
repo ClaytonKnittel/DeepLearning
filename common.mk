@@ -9,7 +9,7 @@ BIN_DIR=$(BASE_DIR)/bin
 
 IFLAGS=-I$(BASE_DIR)/include -I$(UTIL_DIR)/include
 
-DEBUG=1
+DEBUG=0
 VERBOSE=0
 CURSES=0
 

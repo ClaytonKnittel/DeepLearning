@@ -97,7 +97,7 @@ class AlphaBetaMove : public MoveGen {
 private:
 
     static constexpr int inf_depth = -1;
-    static constexpr int min_int = std::numeric_limits<int>::min() + 1;
+    static constexpr int min_int = std::numeric_limits<int>::min();
     static constexpr int max_int = std::numeric_limits<int>::max();
 
     std::unordered_map<GameState, int, GameStateHash> cache;
