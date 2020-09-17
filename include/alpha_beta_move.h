@@ -84,10 +84,47 @@ public:
 
 
 struct GameStateHash {
-   size_t operator() (const GameState & state) const {
-       return 0;
-   }
+    size_t operator() (const GameState & state) const {
+        return 0;
+    }
 };
+
+
+
+class ZobristHash {
+    /*
+     * implementation of a 16-way symmetric zobrist hash function, based on the
+     * algorithm proposed in http://fragrieu.free.fr/zobrist.pdf
+     *
+     * the symmetries under which the hash is invariant are the following:
+     *  r: rotation by 90 degrees (x -> width - y + 1, y -> x)
+     *  m: mirroring vertically (x -> width - x + 1)
+     *  x: color exchanging (e -> e, b -> w, w -> b)
+     *
+     * and the following equations are satisfied under these symmetry
+     * operations (writing the hash Z(board) = z1 z2 z3 z4 z5 z6 z7 z8 in 8
+     * 8-bit bytes):
+     *  Z(r x board) = z2 z3 z4 z1 z6 z7 z8 z5
+     *  Z(m x board) = z4 z3 z2 z1 z8 z7 z6 z5
+     *  Z(x x board) = z5 z6 z7 z8 z1 z2 z3 z4
+     *
+     */
+private:
+
+    // e (empty), b (black), w (white)
+    static constexpr uint32_t num_states = 3;
+
+    coord_t w, h;
+
+
+public:
+
+    ZobristHash(coord_t w, coord_t h) : w(w), h(h) {
+        GO_ASSERT(w == h, "width and height must match for Zobrist hash");
+
+    }
+};
+
 
 
 class AlphaBetaMove : public MoveGen {
