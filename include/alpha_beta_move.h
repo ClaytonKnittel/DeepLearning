@@ -93,12 +93,13 @@ struct GameStateHash {
 
 class ZobristHash {
     /*
-     * implementation of a 16-way symmetric zobrist hash function, based on the
-     * algorithm proposed in http://fragrieu.free.fr/zobrist.pdf
+     * implementation of a 16-way symmetrically invariant zobrist hash
+     * function, based on the algorithm proposed in
+     * http://fragrieu.free.fr/zobrist.pdf
      *
      * the symmetries under which the hash is invariant are the following:
-     *  r: rotation by 90 degrees (x -> width - y + 1, y -> x)
-     *  m: mirroring vertically (x -> width - x + 1)
+     *  r: rotation by 90 degrees (x -> width - y - 1, y -> x)
+     *  m: mirroring vertically (x -> width - x - 1)
      *  x: color exchanging (e -> e, b -> w, w -> b)
      *
      * and the following equations are satisfied under these symmetry
@@ -108,6 +109,12 @@ class ZobristHash {
      *  Z(m x board) = z4 z3 z2 z1 z8 z7 z6 z5
      *  Z(x x board) = z5 z6 z7 z8 z1 z2 z3 z4
      *
+     * necessary restrictions on values of tiles on symmetry lines:
+     *  tengen: z1 z1 z1 z1 z2 z2 z2 z2
+     *  vertical axis: z1 z2 z2 z1 z3 z4 z4 z3
+     *  horizontal axis: z1 z1 z2 z2 z3 z3 z4 z4
+     *  diagonal axis (x = y): z1 z2 z3 z2 z4 z5 z6 z5
+     *  diagonal axis (x = w - y - 1): z1 z2 z1 z3 z4 z5 z4 z6
      */
 private:
 
