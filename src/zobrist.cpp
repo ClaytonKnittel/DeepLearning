@@ -97,34 +97,6 @@ void ZobristHash::initialize() {
         table[white + num_states * idx] = col_x((h)); \
     } while (0)
 
-#define DO_VMIR_SYMS(x, y, h, bh) \
-    do { \
-        board_idx_t idx = (x) + w * (y); \
-        table[empty + num_states * idx] = (bh); \
-        table[black + num_states * idx] = (h); \
-        table[white + num_states * idx] = col_x((h)); \
-        h = vmir(h); \
-        bh = vmir(bh); \
-        idx = w * ((y) + 1) - (x) - 1; \
-        table[empty + num_states * idx] = (bh); \
-        table[black + num_states * idx] = (h); \
-        table[white + num_states * idx] = col_x((h)); \
-    } while (0)
-
-#define DO_HMIR_SYMS(x, y, h, bh) \
-    do { \
-        board_idx_t idx = (x) + w * (y); \
-        table[empty + num_states * idx] = (bh); \
-        table[black + num_states * idx] = (h); \
-        table[white + num_states * idx] = col_x((h)); \
-        h = hmir(h); \
-        bh = hmir(bh); \
-        idx = w * (w - (y) - 1) + (x); \
-        table[empty + num_states * idx] = (bh); \
-        table[black + num_states * idx] = (h); \
-        table[white + num_states * idx] = col_x((h)); \
-    } while (0)
-
 #define DO_DIHEDRAL_SYMS(x, y, h, bh) \
     do { \
         board_idx_t idx = (x) + w * (y); \
@@ -192,33 +164,18 @@ void ZobristHash::initialize() {
             // is odd-length
             if (!even_dims) {
                 if (x == mid_x) {
-                    if (y == mid_y) {
-                        // tengen, repeat first and fifth byte in next 3 bytes
-                        // respectively
-                        rand_gen = rand_gen & 0x000000ff000000ffllu;
-                        rand_gen = rand_gen | (rand_gen << 16);
-                        rand_gen = rand_gen | (rand_gen << 8);
+                    GO_ASSERT(y == mid_y, "x cannot exceed y");
+                    // tengen, repeat first and fifth byte in next 3 bytes
+                    // respectively
+                    rand_gen = rand_gen & 0x000000ff000000ffllu;
+                    rand_gen = rand_gen | (rand_gen << 16);
+                    rand_gen = rand_gen | (rand_gen << 8);
 
-                        blank_rand = blank_rand & 0x000000ff000000ffllu;
-                        blank_rand = blank_rand | (blank_rand << 16);
-                        blank_rand = blank_rand | (blank_rand << 8);
+                    blank_rand = blank_rand & 0x000000ff000000ffllu;
+                    blank_rand = blank_rand | (blank_rand << 16);
+                    blank_rand = blank_rand | (blank_rand << 8);
 
-                        DO_TENGEN(x, y, rand_gen, blank_rand);
-                    }
-                    else {
-                        // on vertical symmetry line, first byte repeats in
-                        // byte 4, third in byte 3, fifth in byte 8, and 7th in
-                        // byte 6
-                        rand_gen = (rand_gen & 0x00ff00ff00ff00ffllu) |
-                            ((rand_gen << 24) & 0xff000000ff000000llu) |
-                            ((rand_gen >> 8)  & 0x0000ff000000ff00llu);
-
-                        blank_rand = (blank_rand & 0x00ff00ff00ff00ffllu) |
-                            ((blank_rand << 24) & 0xff000000ff000000llu) |
-                            ((blank_rand >> 8)  & 0x0000ff000000ff00llu);
-
-                        DO_VMIR_SYMS(x, y, rand_gen, blank_rand);
-                    }
+                    DO_TENGEN(x, y, rand_gen, blank_rand);
                 }
                 else {
                     if (y == mid_y) {
@@ -229,7 +186,7 @@ void ZobristHash::initialize() {
                         blank_rand = blank_rand & 0x00ff00ff00ff00ffllu;
                         blank_rand = blank_rand | (blank_rand << 8);
 
-                        DO_HMIR_SYMS(x, y, rand_gen, blank_rand);
+                        DO_ROT_SYMS(x, y, rand_gen, blank_rand);
                     }
                     else {
                         // not on any symmetry line

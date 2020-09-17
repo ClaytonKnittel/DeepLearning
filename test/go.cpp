@@ -63,7 +63,7 @@ void regular_print(const Game & g) {
 
 int main(int argc, char * argv[]) {
 
-    std::shared_ptr<Go> game = std::make_shared<Go>(4, 4);
+    std::shared_ptr<Go> game = std::make_shared<Go>(5, 5);
     std::shared_ptr<Game> cur_game = game;
 
 #define SAVE_FILE_SIZE 128
