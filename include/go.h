@@ -396,6 +396,38 @@ public:
 
     virtual void for_each_legal_move(std::function<bool(Game &, GameMove &)> f);
 
+    template<typename Fn, typename... Args>
+    void for_each_legal_move_inline(Fn &fn, Args &...args) {
+        GoMove m;
+
+        if (game_over()) {
+            // cannot play once the game has ended
+            return;
+        }
+
+        m.color = max_player() ? Color::black : Color::white;
+
+        coord_t w = this->w;
+        coord_t h = this->h;
+        for (coord_t y = 0; y < h; y++) {
+            for (coord_t x = 0; x < w; x++) {
+                board_idx_t idx = to_idx(x, y);
+                if (is_liberty(idx) && !move_is_suicide(idx, m.color) &&
+                        idx != this->ko_move) {
+                    m.x = x;
+                    m.y = y;
+                    if (!fn(*this, m, std::forward<Args>(args)...)) {
+                        return;
+                    }
+                }
+            }
+        }
+
+        // pass
+        m.color = Color::pass;
+        fn(*this, m, std::forward<Args>(args)...);
+    }
+
 
     // gives the width of the Go board when printed as unicode text
     uint32_t print_width() const;

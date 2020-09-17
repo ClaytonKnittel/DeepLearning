@@ -5,6 +5,53 @@
 #include <game_with_info.h>
 
 
+bool _play(Game &, GameMove & m, Game & g, int & alpha, int & beta,
+        int & best_val, int & depth, uint32_t & res_mask, GameMove * move,
+        uint64_t & cnt) {
+    g.play(m);
+
+    int res = AlphaBetaMove::move_search(g, ~beta, ~alpha, depth - 1, nullptr, cnt);
+
+    // res = ~res if min_player
+    res = res ^ res_mask;
+
+    if (res > best_val) {
+        alpha = std::max(alpha, res);
+        best_val = res;
+        if (move != nullptr) {
+            *move = m;
+        }
+    }
+
+    g.undo();
+
+    // stop iterating once alpha >= beta
+    return alpha < beta;
+}
+
+
+int AlphaBetaMove::move_search(Game & g, int alpha, int beta, int depth, GameMove * move, uint64_t & cnt) {
+    if (depth == 0 || g.game_over()) {
+        // we have reached the limits of our search
+        cnt++;
+        return g.get_score();
+    }
+
+    // 0xffffffff if min_player, else 0
+    uint32_t res_mask = ((uint32_t) g.max_player()) - 1;
+
+    int best_val = min_int;
+
+    Go & go = dynamic_cast<Go &>(g.strip());
+    go.for_each_legal_move_inline<bool(Game &, GameMove &, Game &, int &,
+            int &, int &, int &, uint32_t &, GameMove *, uint64_t &), Game &,
+        int &, int &, int &, int &, uint32_t &, GameMove *, uint64_t &>
+            (_play, g, alpha, beta, best_val, depth, res_mask, move, cnt);
+
+    return best_val ^ res_mask;
+}
+
+/*
 int AlphaBetaMove::move_search(Game & g, int alpha, int beta, int depth, GameMove * move, uint64_t & cnt) {
     if (depth == 0 || g.game_over()) {
         // we have reached the limits of our search
@@ -41,7 +88,7 @@ int AlphaBetaMove::move_search(Game & g, int alpha, int beta, int depth, GameMov
     });
 
     return (best_val ^ res_mask) + min_player;
-}
+}*/
 
 #include <unistd.h>
 

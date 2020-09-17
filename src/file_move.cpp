@@ -55,11 +55,9 @@ void FileMove::find_moves(const std::string & file_name) {
 
             std::string coords = match[2];
             if (coords == "") {
-                printf("PASS\n");
                 m.color = Color::pass;
             }
             else {
-                printf("PASS no \"%s\"\n", coords.c_str());
                 m.x = (coord_t) (coords[0] - 'a');
                 m.y = (coord_t) (coords[1] - 'a');
             }

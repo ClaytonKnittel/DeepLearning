@@ -1576,10 +1576,10 @@ int Go::get_score() const {
         }
     }
 
-    score += black_captures - white_captures;
+    score = (score >> 4) + black_captures - white_captures;
 
     uf_destroy(&uf);
-    return score >> 4;
+    return score;
 }
 
 bool Go::max_player() const {
