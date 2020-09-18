@@ -918,6 +918,7 @@ const char * Go::tile_repr_at(coord_t x, coord_t y) const {
 
     switch (tile) {
         case empty:
+        case ko:
             ret = empty_str;
             break;
         case black:
@@ -945,6 +946,7 @@ const char * Go::selected_tile_repr_at(coord_t x, coord_t y) const {
 
     switch (tile) {
         case empty:
+        case ko:
             ret = empty_str;
             break;
         case black:
@@ -1457,7 +1459,8 @@ Go::~Go() {
 Color Go::tile_at(coord_t x, coord_t y) const {
     board_idx_t idx = to_idx(x, y);
     const Tile & t = tiles[idx];
-    return t.color();
+    Color c = t.color();
+    return (c == empty ? (ko_move == idx ? ko : empty) : c);
 }
 
 
@@ -1585,6 +1588,14 @@ int Go::get_score() const {
 bool Go::max_player() const {
     // black (first player) is maximizing player
     return (turn & 1) == 0;
+}
+
+Color Go::get_player() const {
+    return (turn & 1) == 0 ? black : white;
+}
+
+bool Go::has_passed() const {
+    return last_move == one_pass;
 }
 
 bool Go::is_current() const {

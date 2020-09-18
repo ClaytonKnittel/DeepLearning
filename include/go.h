@@ -19,8 +19,9 @@ enum Color {
     gray  = 0x3,
     num_states = 4,
 
-    // not a legal color for tiles, only in the color field of GoMove
-    pass = 5
+    // not legal colors for tiles, only used for extra info
+    pass = 5,
+    ko = 6
 };
 
 /*
@@ -385,6 +386,16 @@ public:
     virtual int get_score() const;
 
     virtual bool max_player() const;
+
+    /*
+     * return the color of the current player
+     */
+    Color get_player() const;
+
+    /*
+     * returns true if the last player passed
+     */
+    bool has_passed() const;
 
     virtual bool is_current() const;
 

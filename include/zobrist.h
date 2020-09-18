@@ -33,12 +33,20 @@ class ZobristHash {
      */
 private:
 
-    // e (empty), b (black), w (white)
-    static constexpr uint32_t num_states = 3;
+    // e (empty), b (black), w (white), ko
+    static constexpr uint32_t num_states = 4;
+
+    static constexpr zob_hash_t gold_r = 0x9e3779b97f4a7c13llu;
 
     static constexpr uint8_t empty = 0;
     static constexpr uint8_t black = 1;
     static constexpr uint8_t white = 2;
+    static constexpr uint8_t ko    = 3;
+
+    static constexpr uint8_t black_turn = 0;
+    static constexpr uint8_t white_turn = 1;
+    static constexpr uint8_t black_pass_turn = 2;
+    static constexpr uint8_t white_pass_turn = 3;
 
     const coord_t w, h;
 
@@ -46,6 +54,9 @@ private:
      * w * h * num_states table of randomized bitstrings
      */
     zob_hash_t * table;
+
+    // possible values (black, white, black 1-pass, white 1-pass)
+    zob_hash_t turn_hashes[4];
 
     /*
      * "rotate" the hash by 90 degrees
@@ -95,6 +106,56 @@ private:
 public:
 
     ZobristHash(coord_t w, coord_t h);
+
+    inline zob_hash_t hash(const Go & g) {
+        zob_hash_t h = 0;
+        for (coord_t y = 0; y < this->h; y++) {
+            for (coord_t x = 0; x < this->w; x++) {
+                uint8_t tile = (uint8_t) g.tile_at(x, y);
+                //printf("%d ", tile);
+                h ^= table[to_idx(x, y, tile)];
+            }
+            //printf("\n");
+        }
+        uint8_t turn_idx = (g.get_player() == white) + (g.has_passed() << 1);
+        h ^= turn_hashes[turn_idx];
+
+        // combine h with other 15 symmetries
+        zob_hash_t res = (gold_r + (h << 1));
+        h = rot(h);
+        res *= (gold_r + (h << 1));
+        h = rot(h);
+        res *= (gold_r + (h << 1));
+        h = rot(h);
+        res *= (gold_r + (h << 1));
+        h = hmir(h);
+        res *= (gold_r + (h << 1));
+        h = rot(h);
+        res *= (gold_r + (h << 1));
+        h = rot(h);
+        res *= (gold_r + (h << 1));
+        h = rot(h);
+        res *= (gold_r + (h << 1));
+
+        h = col_x(h);
+        res *= (gold_r + (h << 1));
+        h = rot(h);
+        res *= (gold_r + (h << 1));
+        h = rot(h);
+        res *= (gold_r + (h << 1));
+        h = rot(h);
+        res *= (gold_r + (h << 1));
+        h = hmir(h);
+        res *= (gold_r + (h << 1));
+        h = rot(h);
+        res *= (gold_r + (h << 1));
+        h = rot(h);
+        res *= (gold_r + (h << 1));
+        h = rot(h);
+        res *= (gold_r + (h << 1));
+
+        return res >> 1;
+    }
 
 };
 

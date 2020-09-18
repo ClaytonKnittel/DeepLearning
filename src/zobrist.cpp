@@ -58,69 +58,78 @@ void ZobristHash::initialize() {
 
     bool even_dims = (w & 1) == 0;
 
-    zob_hash_t rand_gen, blank_rand;
+    zob_hash_t rand_gen, blank_rand, ko_rand;
 
     // give the RNG a random seed
     seed_rand(time(NULL), 1);
 
-#define DO_TENGEN(x, y, h, bh) \
+#define DO_TENGEN(x, y, h, bh, kh) \
     do { \
         board_idx_t idx = (x) + w * (y); \
         table[empty + num_states * idx] = (bh); \
         table[black + num_states * idx] = (h); \
         table[white + num_states * idx] = col_x((h)); \
+        table[ko    + num_states * idx] = (kh); \
     } while (0)
 
-#define DO_ROT_SYMS(x, y, h, bh) \
+#define DO_ROT_SYMS(x, y, h, bh, kh) \
     do { \
         board_idx_t idx = (x) + w * (y); \
         table[empty + num_states * idx] = (bh); \
         table[black + num_states * idx] = (h); \
         table[white + num_states * idx] = col_x((h)); \
+        table[ko    + num_states * idx] = (kh); \
         h = rot(h); \
         bh = rot(bh); \
         idx = w * ((x) + 1) - (y) - 1; \
         table[empty + num_states * idx] = (bh); \
         table[black + num_states * idx] = (h); \
         table[white + num_states * idx] = col_x((h)); \
+        table[ko    + num_states * idx] = (kh); \
         h = rot(h); \
         bh = rot(bh); \
         idx = w * (w - (y)) - (x) - 1; \
         table[empty + num_states * idx] = (bh); \
         table[black + num_states * idx] = (h); \
         table[white + num_states * idx] = col_x((h)); \
+        table[ko    + num_states * idx] = (kh); \
         h = rot(h); \
         bh = rot(bh); \
         idx = w * (w - (x) - 1) + (y); \
         table[empty + num_states * idx] = (bh); \
         table[black + num_states * idx] = (h); \
         table[white + num_states * idx] = col_x((h)); \
+        table[ko    + num_states * idx] = (kh); \
     } while (0)
 
-#define DO_DIHEDRAL_SYMS(x, y, h, bh) \
+#define DO_DIHEDRAL_SYMS(x, y, h, bh, kh) \
     do { \
         board_idx_t idx = (x) + w * (y); \
         table[empty + num_states * idx] = (bh); \
         table[black + num_states * idx] = (h); \
         table[white + num_states * idx] = col_x((h)); \
+        table[ko    + num_states * idx] = (kh); \
         h = rot(h); \
         bh = rot(bh); \
         idx = w * ((x) + 1) - (y) - 1; \
         table[empty + num_states * idx] = (bh); \
         table[black + num_states * idx] = (h); \
         table[white + num_states * idx] = col_x((h)); \
+        table[ko    + num_states * idx] = (kh); \
         h = rot(h); \
         bh = rot(bh); \
         idx = w * (w - (y)) - (x) - 1; \
         table[empty + num_states * idx] = (bh); \
         table[black + num_states * idx] = (h); \
         table[white + num_states * idx] = col_x((h)); \
+        table[ko    + num_states * idx] = (kh); \
         h = rot(h); \
         bh = rot(bh); \
         idx = w * (w - (x) - 1) + (y); \
         table[empty + num_states * idx] = (bh); \
         table[black + num_states * idx] = (h); \
         table[white + num_states * idx] = col_x((h)); \
+        table[ko    + num_states * idx] = (kh); \
         \
         h = vmir(h); \
         bh = vmir(bh); \
@@ -128,24 +137,28 @@ void ZobristHash::initialize() {
         table[empty + num_states * idx] = (bh); \
         table[black + num_states * idx] = (h); \
         table[white + num_states * idx] = col_x((h)); \
+        table[ko    + num_states * idx] = (kh); \
         h = rot(h); \
         bh = rot(bh); \
         idx = w * (w - (y) - 1) + (x); \
         table[empty + num_states * idx] = (bh); \
         table[black + num_states * idx] = (h); \
         table[white + num_states * idx] = col_x((h)); \
+        table[ko    + num_states * idx] = (kh); \
         h = rot(h); \
         bh = rot(bh); \
         idx = w * (w - (x)) - (y) - 1; \
         table[empty + num_states * idx] = (bh); \
         table[black + num_states * idx] = (h); \
         table[white + num_states * idx] = col_x((h)); \
+        table[ko    + num_states * idx] = (kh); \
         h = rot(h); \
         bh = rot(bh); \
         idx = w * ((y) + 1) - (x) - 1; \
         table[empty + num_states * idx] = (bh); \
         table[black + num_states * idx] = (h); \
         table[white + num_states * idx] = col_x((h)); \
+        table[ko    + num_states * idx] = (kh); \
     } while (0)
 
 
@@ -159,6 +172,9 @@ void ZobristHash::initialize() {
             // exchange
             blank_rand = (zob_hash_t) gen_rand();
             blank_rand = blank_rand | (blank_rand << 32);
+
+            ko_rand = (zob_hash_t) gen_rand();
+            ko_rand = ko_rand | (ko_rand << 32);
 
             // the vertical/horizontal symmetry axes only apply when the board
             // is odd-length
@@ -175,7 +191,11 @@ void ZobristHash::initialize() {
                     blank_rand = blank_rand | (blank_rand << 16);
                     blank_rand = blank_rand | (blank_rand << 8);
 
-                    DO_TENGEN(x, y, rand_gen, blank_rand);
+                    ko_rand = ko_rand & 0x000000ff000000ffllu;
+                    ko_rand = ko_rand | (ko_rand << 16);
+                    ko_rand = ko_rand | (ko_rand << 8);
+
+                    DO_TENGEN(x, y, rand_gen, blank_rand, ko_rand);
                 }
                 else {
                     if (y == mid_y) {
@@ -186,7 +206,10 @@ void ZobristHash::initialize() {
                         blank_rand = blank_rand & 0x00ff00ff00ff00ffllu;
                         blank_rand = blank_rand | (blank_rand << 8);
 
-                        DO_ROT_SYMS(x, y, rand_gen, blank_rand);
+                        ko_rand = ko_rand & 0x00ff00ff00ff00ffllu;
+                        ko_rand = ko_rand | (ko_rand << 8);
+
+                        DO_ROT_SYMS(x, y, rand_gen, blank_rand, ko_rand);
                     }
                     else {
                         // not on any symmetry line
@@ -205,7 +228,10 @@ off_axes:
                     blank_rand = (blank_rand & 0x00ffffff00ffffffllu) |
                         ((blank_rand << 16) & 0xff000000ff000000llu);
 
-                    DO_ROT_SYMS(x, y, rand_gen, blank_rand);
+                    ko_rand = (ko_rand & 0x00ffffff00ffffffllu) |
+                        ((ko_rand << 16) & 0xff000000ff000000llu);
+
+                    DO_ROT_SYMS(x, y, rand_gen, blank_rand, ko_rand);
                 }
                 else if (x == w - y - 1) {
                     // North-West symmetry line, even-indexed byte pairs must match
@@ -215,16 +241,39 @@ off_axes:
                     blank_rand = (blank_rand & 0xff00ffffff00ffffllu) |
                         ((blank_rand << 16) & 0x00ff000000ff0000llu);
 
-                    DO_ROT_SYMS(x, y, rand_gen, blank_rand);
+                    ko_rand = (ko_rand & 0xff00ffffff00ffffllu) |
+                        ((ko_rand << 16) & 0x00ff000000ff0000llu);
+
+                    DO_ROT_SYMS(x, y, rand_gen, blank_rand, ko_rand);
                 }
                 else {
                     // otherwise, we are not on a symmetry line
 
-                    DO_DIHEDRAL_SYMS(x, y, rand_gen, blank_rand);
+                    DO_DIHEDRAL_SYMS(x, y, rand_gen, blank_rand, ko_rand);
                 }
             }
         }
     }
+
+    // now populate turn_hashes
+
+    rand_gen = gen_rand();
+
+    zob_hash_t black_h = (rand_gen & 0x000000ff000000ffllu);
+    black_h = black_h | (black_h << 16);
+    black_h = black_h | (black_h << 8);
+
+    zob_hash_t black_pass_h = (rand_gen & 0x0000ff000000ff00llu);
+    black_pass_h = black_pass_h | (black_pass_h << 16);
+    black_pass_h = black_pass_h | (black_pass_h >> 8);
+
+    zob_hash_t white_h = col_x(black_h);
+    zob_hash_t white_pass_h = col_x(black_pass_h);
+
+    turn_hashes[black_turn] = black_h;
+    turn_hashes[white_turn] = white_h;
+    turn_hashes[black_pass_turn] = black_pass_h;
+    turn_hashes[white_pass_turn] = white_pass_h;
 }
 
 
