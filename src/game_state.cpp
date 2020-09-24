@@ -38,7 +38,8 @@ void GameState::gen_data(Go & g) {
 }
 
 
-GameState::GameState(Go & g) : w(g.width()), h(g.height()) {
+GameState::GameState(Go & g) : w(g.width()), h(g.height()),
+        turn_idx((g.get_player() == white) + (g.has_passed() << 1)), zh(w, h) {
     gen_data(g);
 }
 
@@ -52,7 +53,7 @@ void GameState::print() const {
     for (coord_t r = 0; r < h; r++) {
         for (coord_t c = 0; c < w; c++) {
             uint8_t color = get_idx(c, r);
-            printf("%c", (color == black ? 'b' : color == white ? 'w' : color == empty ? '_' : '?'));
+            printf("%c", (color == black ? 'b' : color == white ? 'w' : color == empty ? '_' : 'k'));
         }
         printf("\n");
     }

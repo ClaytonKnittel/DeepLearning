@@ -34,11 +34,6 @@ zob_hash_t ZobristHash::col_x(zob_hash_t h) {
 }
 
 
-board_idx_t ZobristHash::to_idx(coord_t x, coord_t y, uint8_t color) const {
-    return num_states * ((board_idx_t) x + w * (board_idx_t) y) + color;
-}
-
-
 void ZobristHash::rot_coords(coord_t & x, coord_t & y) const {
     coord_t _x = x;
     coord_t _y = y;
@@ -280,6 +275,12 @@ off_axes:
 
 
 
+board_idx_t ZobristHash::to_idx(coord_t x, coord_t y, uint8_t color) const {
+    return num_states * ((board_idx_t) x + w * (board_idx_t) y) + color;
+}
+
+
+
 ZobristHash::ZobristHash(coord_t w, coord_t h) : w(w), h(h), zt(nullptr) {
     GO_ASSERT(w == h, "width and height must match for Zobrist hash");
 
@@ -294,6 +295,7 @@ ZobristHash::ZobristHash(coord_t w, coord_t h) : w(w), h(h), zt(nullptr) {
     initialize();
 
 
+    /*
     printf("moves:\n");
     for (board_idx_t x = 0; x < 4; x++) {
         printf("%016llx ", turn_hashes[x]);
@@ -323,7 +325,7 @@ ZobristHash::ZobristHash(coord_t w, coord_t h) : w(w), h(h), zt(nullptr) {
             printf("%016llx ", table[to_idx(x, y, white)]);
         }
         printf("\n");
-    }
+    }*/
 }
 
 void ZobristHash::consistency_check() const {

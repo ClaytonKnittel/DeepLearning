@@ -7,7 +7,7 @@
 #include <go.h>
 
 class SymmCheck {
-    constexpr static uint32_t n_symmetries = 8;
+    constexpr static uint32_t n_symmetries = 16;
 
     coord_t w, h;
     ZobristHash zh;
@@ -16,9 +16,15 @@ class SymmCheck {
 public:
     SymmCheck(coord_t w, coord_t h) : w(w), h(h), zh(w, h),
             gos{ Go(w, h), Go(w, h), Go(w, h), Go(w, h),
-                 Go(w, h), Go(w, h), Go(w, h), Go(w, h)/*,
                  Go(w, h), Go(w, h), Go(w, h), Go(w, h),
-                 Go(w, h), Go(w, h), Go(w, h), Go(w, h)*/ } {
+                 Go(w, h), Go(w, h), Go(w, h), Go(w, h),
+                 Go(w, h), Go(w, h), Go(w, h), Go(w, h) } {
+
+        GoMove p;
+        p.color = pass;
+        for (int i = 8; i < n_symmetries; i++) {
+            gos[i].play(p);
+        }
 
         zh.consistency_check();
     }
@@ -31,8 +37,9 @@ public:
         for (int i = 0; i < n_symmetries; i++) {
             GoMove & mov = movs[i];
 
-            int rot = i % 4;
-            int mir = (i / 4) % 2;
+            int rot = (i % 8) % 4;
+            int mir = ((i % 8) / 4) % 2;
+            int col = i / 8;
 
             coord_t x = m.x;
             coord_t y = m.y;
@@ -47,15 +54,20 @@ public:
             if (mir) {
                 x = w - x - 1;
             }
+            if (col) {
+                mov.color = other_color(m.color);
+            }
+            else {
+                mov.color = m.color;
+            }
 
-            mov.color = m.color;
             mov.x = x;
             mov.y = y;
             gos[i].play(mov);
 
             zob_hash_t has = zh.hash(gos[i]);
-            //std::cout << gos[i];
-            //printf("hash: %llx\n", has);
+            /*std::cout << gos[i];
+            printf("hash: %llx\n", has);*/
             if (!has_b4) {
                 p_h = has;
                 has_b4 = true;
@@ -71,9 +83,6 @@ public:
                 }
             }
         }
-
-        std::cout << gos[0];
-        printf("hash: %llx\n", p_h);
     }
 };
 

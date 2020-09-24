@@ -94,13 +94,7 @@ private:
     static zob_hash_t col_x(zob_hash_t h);
 
 
-    /*
-     * returns the index of the given coordinate triple, where
-     * color is one of empty, black, or white
-     */
-    board_idx_t to_idx(coord_t x, coord_t y, uint8_t color) const;
-
-
+private:
     /*
      * repopulates x and y with the point at (x, y) rotated by 90 degrees
      */
@@ -120,22 +114,24 @@ private:
 
 public:
 
+    /*
+     * returns the index of the given coordinate triple, where
+     * color is one of empty, black, or white
+     */
+    board_idx_t to_idx(coord_t x, coord_t y, uint8_t color) const;
+
+    zob_hash_t * get_table() const {
+        return zt->table;
+    }
+
+    const zob_hash_t * get_turn_hashes() const {
+        return turn_hashes;
+    }
+
+
     ZobristHash(coord_t w, coord_t h);
 
-    inline zob_hash_t hash(const Go & g) {
-        const zob_hash_t * table = zt->table;
-        zob_hash_t h = 0;
-        for (coord_t y = 0; y < this->h; y++) {
-            for (coord_t x = 0; x < this->w; x++) {
-                uint8_t tile = (uint8_t) g.tile_at(x, y);
-                //printf("%d ", tile);
-                h ^= table[to_idx(x, y, tile)];
-            }
-            //printf("\n");
-        }
-        uint8_t turn_idx = (g.get_player() == white) + (g.has_passed() << 1);
-        h ^= turn_hashes[turn_idx];
-
+    static inline zob_hash_t make_symm(zob_hash_t h) {
         // combine h with other 15 symmetries
         zob_hash_t res = (gold_r + (h << 1));
         h = rot(h);
@@ -171,6 +167,21 @@ public:
         res *= (gold_r + (h << 1));
 
         return res >> 1;
+    }
+
+    inline zob_hash_t hash(const Go & g) const {
+        const zob_hash_t * table = zt->table;
+        zob_hash_t h = 0;
+        for (coord_t y = 0; y < this->h; y++) {
+            for (coord_t x = 0; x < this->w; x++) {
+                uint8_t tile = (uint8_t) g.tile_at(x, y);
+                h ^= table[to_idx(x, y, tile)];
+            }
+        }
+        uint8_t turn_idx = (g.get_player() == white) + (g.has_passed() << 1);
+        h ^= turn_hashes[turn_idx];
+
+        return make_symm(h);
     }
 
     void consistency_check() const;
