@@ -6,6 +6,19 @@
 
 typedef uint64_t zob_hash_t;
 
+
+struct ZobTable {
+    zob_hash_t * table;
+
+    ZobTable(zob_hash_t * table) : table(table) {}
+    ~ZobTable() {
+        if (table) {
+            free(table);
+        }
+    }
+};
+
+
 class ZobristHash {
     /*
      * implementation of a 16-way symmetrically invariant zobrist hash
@@ -31,7 +44,7 @@ class ZobristHash {
      *  diagonal axis (x = y): z1 z2 z3 z2 z4 z5 z6 z5
      *  diagonal axis (x = w - y - 1): z1 z2 z1 z3 z4 z5 z4 z6
      */
-private:
+public:
 
     // e (empty), b (black), w (white), ko
     static constexpr uint32_t num_states = 4;
@@ -48,12 +61,14 @@ private:
     static constexpr uint8_t black_pass_turn = 2;
     static constexpr uint8_t white_pass_turn = 3;
 
+private:
+
     const coord_t w, h;
 
     /*
      * w * h * num_states table of randomized bitstrings
      */
-    zob_hash_t * table;
+    std::shared_ptr<ZobTable> zt;
 
     // possible values (black, white, black 1-pass, white 1-pass)
     zob_hash_t turn_hashes[4];
@@ -108,6 +123,7 @@ public:
     ZobristHash(coord_t w, coord_t h);
 
     inline zob_hash_t hash(const Go & g) {
+        const zob_hash_t * table = zt->table;
         zob_hash_t h = 0;
         for (coord_t y = 0; y < this->h; y++) {
             for (coord_t x = 0; x < this->w; x++) {
@@ -156,6 +172,8 @@ public:
 
         return res >> 1;
     }
+
+    void consistency_check() const;
 
 };
 

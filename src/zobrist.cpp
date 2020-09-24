@@ -56,6 +56,8 @@ void ZobristHash::initialize() {
     const coord_t mid_x = (w - 1) / 2;
     const coord_t mid_y = (h - 1) / 2;
 
+    zob_hash_t * table = const_cast<zob_hash_t *>(this->zt->table);
+
     bool even_dims = (w & 1) == 0;
 
     zob_hash_t rand_gen, blank_rand, ko_rand;
@@ -133,7 +135,7 @@ void ZobristHash::initialize() {
         \
         h = vmir(h); \
         bh = vmir(bh); \
-        idx = w * (x) + (y); \
+        idx = w * (w - (x)) - (y) - 1; \
         table[empty + num_states * idx] = (bh); \
         table[black + num_states * idx] = (h); \
         table[white + num_states * idx] = col_x((h)); \
@@ -147,7 +149,7 @@ void ZobristHash::initialize() {
         table[ko    + num_states * idx] = (kh); \
         h = rot(h); \
         bh = rot(bh); \
-        idx = w * (w - (x)) - (y) - 1; \
+        idx = w * (x) + (y); \
         table[empty + num_states * idx] = (bh); \
         table[black + num_states * idx] = (h); \
         table[white + num_states * idx] = col_x((h)); \
@@ -257,7 +259,7 @@ off_axes:
 
     // now populate turn_hashes
 
-    rand_gen = gen_rand();
+    rand_gen = gen_rand64();
 
     zob_hash_t black_h = (rand_gen & 0x000000ff000000ffllu);
     black_h = black_h | (black_h << 16);
@@ -278,16 +280,26 @@ off_axes:
 
 
 
-ZobristHash::ZobristHash(coord_t w, coord_t h) : w(w), h(h) {
+ZobristHash::ZobristHash(coord_t w, coord_t h) : w(w), h(h), zt(nullptr) {
     GO_ASSERT(w == h, "width and height must match for Zobrist hash");
 
     size_t num_entries = w * h * num_states;
-    table = (zob_hash_t *) malloc(num_entries * sizeof(zob_hash_t));
+    zob_hash_t * table = (zob_hash_t *) malloc(num_entries * sizeof(zob_hash_t));
     if (!table) {
         throw std::runtime_error("unable to malloc memory for zorist hash table");
     }
 
+    zt = std::make_shared<ZobTable>(table);
+
     initialize();
+
+
+    printf("moves:\n");
+    for (board_idx_t x = 0; x < 4; x++) {
+        printf("%016llx ", turn_hashes[x]);
+    }
+    printf("\n");
+
 
     printf("blank board:\n");
     for (board_idx_t y = 0; y < h; y++) {
@@ -311,6 +323,64 @@ ZobristHash::ZobristHash(coord_t w, coord_t h) : w(w), h(h) {
             printf("%016llx ", table[to_idx(x, y, white)]);
         }
         printf("\n");
+    }
+}
+
+void ZobristHash::consistency_check() const {
+    const coord_t mid_x = (w - 1) / 2;
+    const coord_t mid_y = (h - 1) / 2;
+
+    for (coord_t _y = 0; _y <= mid_y; _y++) {
+        for (coord_t _x = 0; _x <= _y; _x++) {
+            coord_t x = _x;
+            coord_t y = _y;
+
+            zob_hash_t v = zt->table[to_idx(x, y, empty)];
+            assert(v == col_x(v));
+
+            for (int i = 0; i < 3; i++) {
+                v = rot(v);
+                rot_coords(x, y);
+                assert(v == zt->table[to_idx(x, y, empty)]);
+                assert(v == col_x(v));
+            }
+
+            v = vmir(v);
+            mir_coords(x, y);
+
+            for (int i = 0; i < 4; i++) {
+                v = rot(v);
+                rot_coords(x, y);
+                assert(v == zt->table[to_idx(x, y, empty)]);
+                assert(v == col_x(v));
+            }
+
+            v = zt->table[to_idx(x, y, black)];
+            zob_hash_t vw = zt->table[to_idx(x, y, white)];
+            assert(v == col_x(vw));
+
+            for (int i = 0; i < 3; i++) {
+                v = rot(v);
+                vw = rot(vw);
+                rot_coords(x, y);
+                assert(v == zt->table[to_idx(x, y, black)]);
+                assert(vw == zt->table[to_idx(x, y, white)]);
+                assert(v == col_x(vw));
+            }
+
+            v = vmir(v);
+            vw = vmir(vw);
+            mir_coords(x, y);
+
+            for (int i = 0; i < 4; i++) {
+                v = rot(v);
+                vw = rot(vw);
+                rot_coords(x, y);
+                assert(v == zt->table[to_idx(x, y, black)]);
+                assert(vw == zt->table[to_idx(x, y, white)]);
+                assert(v == col_x(vw));
+            }
+        }
     }
 }
 
